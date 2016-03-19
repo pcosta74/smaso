@@ -1,4 +1,4 @@
-Agent.micro.econ <- function(dados,weeks) {
+Agent.micro.econ <- function(dados,weeks,verbose=F) {
   
   # *************************************************************
   # Read-in data
@@ -15,8 +15,10 @@ Agent.micro.econ <- function(dados,weeks) {
   nagents <- nrow(quant)
   ngoods <- ncol(quant)
   offset <- 0
-  cat("number of agents",nagents,"\n")
-  cat("number of goods",ngoods,"\n")
+  if(verbose) {
+    cat("number of agents",nagents,"\n")
+    cat("number of goods",ngoods,"\n")
+  }
   
   # Maximum number of iterations
   it <- 75
@@ -34,10 +36,16 @@ Agent.micro.econ <- function(dados,weeks) {
   hist.wealth <- matrix(rep(0,nagents),1,nagents)
   hist.wealth <- as.data.frame(hist.wealth)
   hist.wealth[1,1:nagents] <- wealth
+  names(hist.wealth)<-paste("Agent",1:nagents,sep=' ')
+
+  hist.utility <- hist.wealth
+  hist.utility[1,1:nagents] <- utility(quant, beta)
   
   ### Iterate for weeks
-  for (week in 1:weeks) {     
-    cat("Week no.: ",week,"\n")
+  for (week in 1:weeks) {
+    if(verbose) {
+      cat("Week no.: ",week,"\n")
+    }
     
     # Call market
     new.values <- market(nagents,ngoods,offset,quant,prices,beta,hist.iter.ex.demand,hist.iter.prices,it,week)
@@ -47,6 +55,8 @@ Agent.micro.econ <- function(dados,weeks) {
     hist.prices <- rbind(hist.prices,prices)
     
     quant <- new.values[[2]]
+    util <- utility(quant,beta)
+    hist.utility <- rbind(hist.utility,util)
     
     # Initial wealth
     #  cat("Initial wealth","\n")
@@ -69,20 +79,28 @@ Agent.micro.econ <- function(dados,weeks) {
     #  print(round(wealth,1))
     
   } # end iterate weeks
-  cat("Evolution of prices","\n")
-  print(hist.prices)
   
-  cat("Evolution of wealth of agents","\n")
-  print(hist.wealth)
-  
-  return(list(hist.prices, hist.wealth))
+  if(verbose) {
+    cat("Evolution of prices","\n")
+    print(hist.prices)
+    
+    cat("Evolution of wealth of agents","\n")
+    print(hist.wealth)
+    
+    cat("Evolution of utility of agents","\n")
+    print(hist.utility)
+  }
+
+  return(list(hist.prices, hist.wealth, hist.utility))
 } # end function Agent.micro.econ
 
 
 # *****************************************************************
 # Function market establishes new price and quantities (= desired)
 
-market <- function(nagents,ngoods,offset,quant,prices,beta,hist.iter.ex.demand,hist.iter.prices,it,week) { 
+market <- function(nagents,ngoods,offset,quant,prices,beta,
+                   hist.iter.ex.demand,hist.iter.prices,it,week,
+                   verbose=F) { 
   
   
   # Initialization of variables   			
@@ -144,7 +162,7 @@ market <- function(nagents,ngoods,offset,quant,prices,beta,hist.iter.ex.demand,h
     
   } 		# End of iterative process
   
-  if (week == 1){
+  if (verbose && week == 1){
     # Output evolution of excess demand
     cat("Evolution of excess demand","\n")
     print(round(hist.iter.ex.demand,2))
@@ -160,9 +178,7 @@ market <- function(nagents,ngoods,offset,quant,prices,beta,hist.iter.ex.demand,h
     cat("Final quantities after exchange on the market","\n")
     print(round(desired,3))
   }
-  
-  
-  
+
   new.values <- list()
   new.values[[1]] <- prices
   new.values[[2]] <- desired
@@ -177,4 +193,9 @@ wealth <- function(nagents,ngoods,offset,quant,prices) {
       wealth[agent]<- sum(quant[agent,]*prices)  
     }}
   return(wealth)
+}
+
+utility <- function(quant,beta) {
+  quant[quant<0]<-0
+  apply(beta*log(quant),1,sum)
 }

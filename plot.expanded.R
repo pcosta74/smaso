@@ -1,11 +1,11 @@
 source('./properties.R')
 
 plot.scenarios<-
-  function(weeks, bs.scen, as.scen, scenario=NULL,
+  function(weeks, bs.scen, as.scen, setup=NULL,
            description='', out.files=FALSE, file.format=NULL) {
     
-    scenario <- tryCatch(
-      as.character(match.arg(file.format,levels(SCENARIOS))),
+    setup <- tryCatch(
+      as.character(match.arg(file.format,levels(SETUPS))),
       error=function(e) {
         stop(paste('Invalid file format',sQuote(file.format)), call.=F)
       }
@@ -20,7 +20,7 @@ plot.scenarios<-
 
     for(indicator in levels(INDICATORS)) {
       if(out.files) {
-        filename <- paste(indicator, description, scenario, sep='-')
+        filename <- paste(indicator, description, setup, sep='-')
         filepath <- file.path(paste(filename, file.format, sep='.'))
         eval(call(file.format, filepath, antialias='subpixel',
                   width=FILE.WDT, height=FILE.HGT, res=FILE.RES))
@@ -69,16 +69,16 @@ plot.vars <-
          inset=rep(1.1,4)
   )
 
-  for (good in 1:limit) {
+  for (column in 1:limit) {
     par(mai=rep(0.35,4))
     
     #determina o valor maximo do eixo YY
-    m<-max(bs.scen[[index]][,good], as.scen[[index]][,good])
+    m<-max(bs.scen[[index]][,column], as.scen[[index]][,column], na.rm=T)
     x.ticks<-pretty(0:weeks+1,n=weeks+2)
     y.ticks<-pretty(0:1.1*m)
     
     #desenhar o cenario base
-    plot(bs.scen[[index]][,good], 
+    plot(bs.scen[[index]][,column], 
          type = "l", 
          ann=FALSE,
          axes=FALSE,
@@ -88,13 +88,13 @@ plot.vars <-
          lwd = PLOT.LWD,
          col = COL.BASE)
     #desenhar cenario alternativo
-    lines(as.scen[[index]][,good], 
+    lines(as.scen[[index]][,column], 
           type = "l",
           lwd = PLOT.LWD,
           col = COL.ALTER)
     
     #titulos
-    title(main=colnames(bs.scen[[index]][good]),line=0.7)
+    title(main=colnames(bs.scen[[index]][column]),line=0.7)
     
     # configuração dos eixos
     axis(side=1, cex.axis=0.7, at=x.ticks, mgp=c(3, 0.5, 0))
@@ -109,6 +109,3 @@ plot.vars <-
         line=0)
 }
 
-camel.case<-function(x) {
-  gsub('(\\w)(\\w*)', '\\U\\1\\L\\2', x, perl=TRUE)
-}

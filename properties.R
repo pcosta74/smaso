@@ -1,7 +1,7 @@
 # Properties file
 
-SCENARIOS <- ordered(c('4x4','12x5'), levels=c('4x4','12x5'))
-INDICATORS <- ordered(c('prices','wealth'), levels=c('prices','wealth'))
+SETUPS <- ordered(1:2, labels=c('4x4','12x5'))
+INDICATORS <- ordered(1:3, labels=c('prices','wealth','utility'))
 WEEKS <- 20
 
 COL.BASE <- 4

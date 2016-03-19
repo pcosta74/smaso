@@ -3,47 +3,47 @@ source('./setup.expanded.R')
 source('./plot.expanded.R')
 source('./micro.econ.expanded.R')
 
-#RUNNING AGENT#
-scenario <- as.character(SCENARIOS[1])
 out.files <- FALSE
 
-# Overproduction
-mtx<-matrix(1,4,4)
-mtx[1,1]<-2
-setup.new(scenario, ratio.delta = mtx)
+#RUNNING AGENT#
+setup <- as.character(SETUPS[1])
+dim<-dim.setup(setup)
 
-bs <- Agent.micro.econ(base, WEEKS)
-as <- Agent.micro.econ(alter,WEEKS)
-plot.scenarios(WEEKS, bs, as, scenario, "overproduction", out.files)
+# 1: Over production
+p.mtx<-matrix(1,dim[1],dim[2])
+p.mtx[2,2]<-1.5
+v.mtx<-matrix(1,dim[1],dim[2])
+v.mtx[2,]<-1.5
+setup.new(setup, prod.delta = p.mtx, vcons.delta = v.mtx)
 
-#Underproduction
-mtx[1,1]<-0.5
-setup.new(scenario, ratio.delta = mtx)
+bs <- Agent.micro.econ(base, WEEKS, TRUE)
+as <- Agent.micro.econ(alter,WEEKS, TRUE)
+plot.scenarios(WEEKS, bs, as, setup, "altered ratio", out.files)
 
-bs <- Agent.micro.econ(base, WEEKS)
-as <- Agent.micro.econ(alter,WEEKS)
-plot.scenarios(WEEKS, bs, as, scenario, "underproduction", out.files)
+# 2: Productivity
+mtx<-matrix(1,dim[1],dim[2])
+mtx[2,2]<-2
+setup.new(setup, prod.delta = mtx)
 
-# Productivity
-mtx[1,1]<-2
-setup.new(scenario, prod.delta = mtx)
+bs <- Agent.micro.econ(base, WEEKS, TRUE)
+as <- Agent.micro.econ(alter,WEEKS, TRUE)
+plot.scenarios(WEEKS, bs, as, setup, "doubled productivity", out.files)
 
-bs <- Agent.micro.econ(base, WEEKS)
-as <- Agent.micro.econ(alter,WEEKS)
-plot.scenarios(WEEKS, bs, as, scenario, "productivity", out.files)
+# 4: Quantitities
+mtx<-matrix(1,dim[1],dim[2])
+mtx[2,2]<-0.5
+setup.new(setup, quant.delta = mtx)
 
-# Quantitities
-mtx[1,1]<-0.1
-setup.new(scenario, quant.delta = mtx)
+bs <- Agent.micro.econ(base, WEEKS, TRUE)
+as <- Agent.micro.econ(alter,WEEKS, TRUE)
+plot.scenarios(WEEKS, bs, as, setup, "same quantity", out.files)
 
-bs <- Agent.micro.econ(base, WEEKS)
-as <- Agent.micro.econ(alter,WEEKS)
-plot.scenarios(WEEKS, bs, as, scenario, "quantity", out.files)
+# 5: Preferences
+mtx<-matrix(1,dim[1],dim[2])
+mtx[1,1]<-0.7
+mtx[2,2]<-4
+setup.new(setup, pref.delta = mtx)
 
-# Preference
-mtx[1,1]<-0.5
-setup.new(scenario, pref.delta = mtx)
-
-bs <- Agent.micro.econ(base, WEEKS)
-as <- Agent.micro.econ(alter,WEEKS)
-plot.scenarios(WEEKS, bs, as, scenario, "preference", out.files)
+bs <- Agent.micro.econ(base, WEEKS, TRUE)
+as <- Agent.micro.econ(alter,WEEKS, TRUE)
+plot.scenarios(WEEKS, bs, as, setup, "Altered preferences", out.files)
