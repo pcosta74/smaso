@@ -1,5 +1,7 @@
 source('./properties.R')
+source('./enums.R')
 source('./utils.R')
+source('./setup.R')
 
 #
 # Redefine setup
@@ -7,15 +9,11 @@ source('./utils.R')
 setup.new <- function(x = NULL, 
                       quant.delta = 1, pref.delta = 1, 
                       prod.delta = 1, vcons.delta = 1) {
-    
     ##
     # Parse parameters
     
     # Validade setup
-    x <- tryCatch(
-      as.character(match.arg(x, levels(SETUPS))),
-      error = function(e) stop('Invalid setup ', sQuote(x), call.=F)
-    )
+    x <- match.enum(x,SETUPS)
     dims <- dim.setup(x)
     
     # Handle ratios
@@ -36,27 +34,52 @@ setup.new <- function(x = NULL,
       }
     }
     
-    # Call original setup function
-    source('./setup.R', local = T)
-    setup()
-    
-    # Base setup
-    base<<- switch(x,
-      '4x4' = dados1,
-      '12x5' = dados2
-    )
-    names(base)<<-c('QUANT','PRICES','BETA','HIST',
-                   'F.CONS','V.CONS','PROD')
-    
+
+    if(!exists('base')) {
+      # Call original setup
+      setup()
+      
+      # Base setup
+      base <<- switch(
+        as.character(x),
+        '4x4' = dados1,
+        '12x5' = dados2
+      )
+      names(base)<<-c('QUANT','PRICES','BETA','HIST',
+                      'F.CONS','V.CONS','PROD')
+      
+      # clean up
+      rm(dados1, pos = ".GlobalEnv")
+      rm(dados2, pos = ".GlobalEnv")
+    }
+
     # Alternative setup
     alter <<- base
     alter[[1]] <<- base[[1]] * quant.delta 
     alter[[3]] <<- base[[3]] * pref.delta
     alter[[6]] <<- base[[6]] * vcons.delta
     alter[[7]] <<- base[[7]] * prod.delta
-    
-    # clean up
-    rm(dados1, pos = ".GlobalEnv")
-    rm(dados2, pos = ".GlobalEnv")
-  }
+}
+
+sector.agents<-function(setup, sector, exclude.=F) {
+  dims <- dim.setup(setup)
+  n.sec.ag <- ceiling(dims[1]/dims[2])
+  lst.ag <- c((sector-1)*n.sec.ag + c(1:n.sec.ag))
+  
+  if(exclude.) return(setdiff(1:dims[1],lst.ag))
+  return(lst.ag)
+}
+
+# `agents<-` <- function(m,value,...) {
+#   args<-list(...)
+#   
+#   if(args$sector && is.numeric(args$sector)) {
+#     n.agents<-ceiling(nrow(m)/ncol(m))
+#     sector<-as.integer(args$sector)
+#     m[sector*1:n.agents,sector]<-value
+#   } else {
+#     m[,]<-value
+#   }
+#   return(m)
+# }
 

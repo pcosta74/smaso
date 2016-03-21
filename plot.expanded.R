@@ -1,29 +1,23 @@
 source('./properties.R')
+source('./enums.R')
 
+# export file formats 
+PLOT.FILE.FORMATS <- enum(c('bmp','png','jpeg','tiff'))
+
+# plot base and alternative scenarios
 plot.scenarios<-
   function(weeks, bs.scen, as.scen, setup=NULL,
            description='', out.files=FALSE, file.format=NULL) {
     
-    setup <- tryCatch(
-      as.character(match.arg(file.format,levels(SETUPS))),
-      error=function(e) {
-        stop(paste('Invalid file format',sQuote(file.format)), call.=F)
-      }
-    )
-
-    file.format <- tryCatch(
-      as.character(match.arg(file.format,levels(FILE.FORMATS))),
-      error=function(e) {
-        stop(paste('Invalid file format',sQuote(file.format)), call.=F)
-      }
-    )
+    setup <- match.enum(setup, SETUPS)
+    file.format <- match.enum(file.format, PLOT.FILE.FORMATS)
 
     for(indicator in levels(INDICATORS)) {
       if(out.files) {
         filename <- paste(indicator, description, setup, sep='-')
         filepath <- file.path(paste(filename, file.format, sep='.'))
         eval(call(file.format, filepath, antialias='subpixel',
-                  width=FILE.WDT, height=FILE.HGT, res=FILE.RES))
+                  width=PLOT.FILE.WDT, height=PLOT.FILE.HGT, res=PLOT.FILE.RES))
         message(paste("Generated", sQuote(filepath)))
       }
       
@@ -35,25 +29,22 @@ plot.scenarios<-
     }
   }
 
+# plot variables in scenario
 plot.vars <- 
   function(weeks, bs.scen, as.scen, indicator, description='') {
   
   # validar indicator
-  index <- tryCatch(
-    as.numeric(match.arg(indicator,INDICATORS)),
-    error = function(e) {
-      stop(paste('Invalid indicator',sQuote(indicator)),call.=F)
-    }
-  )
+  index <- match.enum(indicator,INDICATORS)
   
   # estabelecer limites
   limit <- ncol(bs.scen[[index]])
   ncols <- ceiling(sqrt(limit))
-  ncells <- ncols * (limit%/%ncols + limit%%2)
+  nrows <- limit%/%ncols
+  ncells <- ncols * (nrows + limit%%2)
   
   # graficos na mesma janela
-  cells<-c(rep(0, ncols),(1:ncells)) + 1
-  grid<-matrix(cells, ncol = ncols, byrow = TRUE)
+  cells<-1:ncells + 1
+  grid<-rbind(rep(1, ncols),matrix(cells, ncol = ncols))
   layout(mat = grid, heights = c(0.15, rep(1, nrow(grid)-1)), respect = TRUE)
 
     # oma e a margem do titulo principal
@@ -65,7 +56,7 @@ plot.vars <-
          title = expression(bold('Scenarios')), 
          camel.case(c("base", description)),
          lty=1, lwd=PLOT.LWD, cex = 0.8,
-         col=c(COL.BASE, COL.ALTER),
+         col=c(PLOT.COL.BASE, PLOT.COL.ALTER),
          inset=rep(1.1,4)
   )
 
@@ -86,12 +77,12 @@ plot.vars <-
          xlim = c(1,max(x.ticks)),
          ylim = c(0,max(y.ticks)),
          lwd = PLOT.LWD,
-         col = COL.BASE)
+         col = PLOT.COL.BASE)
     #desenhar cenario alternativo
     lines(as.scen[[index]][,column], 
           type = "l",
           lwd = PLOT.LWD,
-          col = COL.ALTER)
+          col = PLOT.COL.ALTER)
     
     #titulos
     title(main=colnames(bs.scen[[index]][column]),line=0.7)
