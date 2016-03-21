@@ -3,6 +3,23 @@ source('./enums.R')
 source('./utils.R')
 source('./setup.R')
 
+# Sector constants
+AGRC <- 1
+CLTH <- 2
+TRNS <- 3
+FUEL <- 4
+HLTH <- 4
+MONY <- 5
+
+# Pages
+QUANT  <- 1
+PRICE  <- 2
+BETA   <- 3
+HIST   <- 4
+FCONS  <- 5
+VCONS  <- 6
+PROD   <- 7
+
 #
 # Redefine setup
 #
@@ -45,9 +62,8 @@ setup.new <- function(x = NULL,
         '4x4' = dados1,
         '12x5' = dados2
       )
-      names(base)<<-c('QUANT','PRICES','BETA','HIST',
-                      'F.CONS','V.CONS','PROD')
-      
+      names(base)<<-levels(PAGES)
+
       # clean up
       rm(dados1, pos = ".GlobalEnv")
       rm(dados2, pos = ".GlobalEnv")
@@ -55,10 +71,10 @@ setup.new <- function(x = NULL,
 
     # Alternative setup
     alter <<- base
-    alter[[1]] <<- base[[1]] * quant.delta 
-    alter[[3]] <<- base[[3]] * pref.delta
-    alter[[6]] <<- base[[6]] * vcons.delta
-    alter[[7]] <<- base[[7]] * prod.delta
+    alter[[QUANT]] <<- base[[QUANT]] * quant.delta 
+    alter[[PRICE]] <<- base[[PRICE]] * pref.delta
+    alter[[VCONS]] <<- base[[VCONS]] * vcons.delta
+    alter[[PROD]]  <<- base[[PROD]] * prod.delta
 }
 
 sector.agents<-function(setup, sector, exclude.=F) {
