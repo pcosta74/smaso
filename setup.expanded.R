@@ -72,7 +72,7 @@ setup.new <- function(x = NULL,
     # Alternative setup
     alter <<- base
     alter[[QUANT]] <<- base[[QUANT]] * quant.delta 
-    alter[[PRICE]] <<- base[[PRICE]] * pref.delta
+    alter[[BETA]]  <<- base[[BETA]] * pref.delta
     alter[[VCONS]] <<- base[[VCONS]] * vcons.delta
     alter[[PROD]]  <<- base[[PROD]] * prod.delta
 }
