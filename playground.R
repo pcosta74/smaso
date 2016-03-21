@@ -40,12 +40,10 @@ bs <- Agent.micro.econ(base, WEEKS, verbose)
 as <- Agent.micro.econ(alter,WEEKS, verbose)
 plot.scenarios(WEEKS, bs, as, SETUP, "doubled productivity", plot.files)
 
-# 3: ?
-p.mtx<-matrix(1,dim[1],dim[2])
-p.mtx[clth.agents,2]<-0.923
-v.mtx<-matrix(1,dim[1],dim[2])
-v.mtx[sector.agents(SETUP, 2, exclude.=T),2]<-0.308
-setup.new(SETUP, prod.delta = p.mtx, vcons.delta = v.mtx)
+# 3: Balanced market
+setup.new(SETUP)
+alter[[6]][2,2] <- alter[[6]][setdiff(1:dim[1],2),2] + 0.0128
+alter[[7]][2,2] <- alter[[7]][2,2] + 0.0384
 
 bs <- Agent.micro.econ(base, WEEKS, verbose)
 as <- Agent.micro.econ(alter,WEEKS, verbose)
