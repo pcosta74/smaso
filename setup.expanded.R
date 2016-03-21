@@ -62,7 +62,7 @@ setup.new <- function(x = NULL,
         '4x4' = dados1,
         '12x5' = dados2
       )
-      names(base)<<-levels(PAGES)
+      names(base)<<-c('QUANT','PRICES','BETA','HIST','FCONS','VCONS','PROD')
 
       # clean up
       rm(dados1, pos = ".GlobalEnv")
