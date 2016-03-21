@@ -3,27 +3,21 @@ source('./enums.R')
 source('./utils.R')
 source('./setup.R')
 
-# Sector constants
+# Sector indexes
 AGRC <- 1
 CLTH <- 2
 TRNS <- 3
-FUEL <- 4
-HLTH <- 4
+FUEL <- HLTH <- 4
 MONY <- 5
 
-# Pages
-QUANT  <- 1
-PRICE  <- 2
-BETA   <- 3
-HIST   <- 4
-FCONS  <- 5
-VCONS  <- 6
-PROD   <- 7
+# Variable indexes
+for(s in seq_along(VARIABLES))
+  assign(as.character(VARIABLES[s]), as.integer(VARIABLES[s]), pos = '.GlobalEnv')
 
 #
 # Redefine setup
 #
-setup.new <- function(x = NULL, 
+setup.new <- function(x = NULL,
                       quant.delta = 1, pref.delta = 1, 
                       prod.delta = 1, vcons.delta = 1) {
     ##
@@ -62,19 +56,19 @@ setup.new <- function(x = NULL,
         '4x4' = dados1,
         '12x5' = dados2
       )
-      names(base)<<-c('QUANT','PRICE','BETA','HIST','FCONS','VCONS','PROD')
+      names(base)<<-levels(VARIABLES)
 
       # clean up
-      rm(dados1, pos = ".GlobalEnv")
-      rm(dados2, pos = ".GlobalEnv")
+      rm(dados1, pos = '.GlobalEnv')
+      rm(dados2, pos = '.GlobalEnv')
     }
 
     # Alternative setup
     alter <<- base
-    alter[[QUANT]] <<- base[[QUANT]] * quant.delta 
-    alter[[BETA]]  <<- base[[BETA]] * pref.delta
-    alter[[VCONS]] <<- base[[VCONS]] * vcons.delta
-    alter[[PROD]]  <<- base[[PROD]] * prod.delta
+    alter[[QNTT]] <<- base[[QNTT]] * quant.delta 
+    alter[[BETA]] <<- base[[BETA]] * pref.delta
+    alter[[VCON]] <<- base[[VCON]] * vcons.delta
+    alter[[PROD]] <<- base[[PROD]] * prod.delta
 }
 
 sector.agents<-function(setup, sector, exclude.=F) {

@@ -42,8 +42,8 @@ plot.scenarios(WEEKS, bs, as, SETUP, "doubled productivity", plot.files)
 
 # 3: Balanced market
 setup.new(SETUP)
-other.agents <- setdiff(1:dim[1],clth.agents)
-alter[[VCONS]][other.agents,CLTH] <- alter[[VCONS]][other.agents,CLTH] + 0.0128
+othr.agents <- setdiff(1:dim[1],clth.agents)
+alter[[VCON]][othr.agents,CLTH] <- alter[[VCON]][othr.agents,CLTH] + 0.0128
 alter[[PROD]][clth.agents,CLTH] <- alter[[PROD]][clth.agents,CLTH] + 0.0384
 
 bs <- Agent.micro.econ(base, WEEKS, verbose)
