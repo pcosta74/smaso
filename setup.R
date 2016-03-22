@@ -50,7 +50,7 @@ setup <- function() {
     Agriculture=c(84,0,0,0),
     Clothing=c(0,0.4616,0,0),
     Transportation=c(0,0, 0.015384, 0),
-    Fuel=c(0,0,0,0.9232)
+      Fuel=c(0,0,0,0.9232)
   )
 
   dados1 <<- list()

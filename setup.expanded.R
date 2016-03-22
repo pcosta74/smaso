@@ -56,7 +56,8 @@ setup.new <- function(x = NULL,
         '4x4' = dados1,
         '12x5' = dados2
       )
-      names(base)<<-levels(VARIABLES)
+      base[[UCST]] <<- base[[VCON]]/apply(base[[PROD]], 1, max)
+      names(base)  <<- levels(VARIABLES)
 
       # clean up
       rm(dados1, pos = '.GlobalEnv')
