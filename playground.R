@@ -58,7 +58,7 @@ mony.agents <- sector.agents(SETUP, MONY)
 # bs <- Agent.micro.econ(base, WEEKS, verbose)
 # as <- Agent.micro.econ(alter,WEEKS, verbose)
 # plot.scenarios(WEEKS, bs, as, SETUP, "same quantity", plot.files)
-# 
+
 # # 5: Preferences
 # p.mtx <- matrix(1,dim[1],dim[2])
 # p.mtx[,AGRC] <- 0.7 # 0.35

@@ -21,7 +21,12 @@ plot.scenarios<-
         message(paste("Generated", sQuote(filepath)))
       }
       
-      plot.vars(weeks, bs.scen, as.scen, indicator, description)
+      ylab <- switch(indicator,
+        'wealth' = 'monetary units',
+        'prices' = 'monetaty units',
+        'units'
+      )
+      plot.vars(weeks, bs.scen, as.scen, indicator, description, ylab=ylab)
       
       if(out.files) {
         dev.off()
@@ -31,7 +36,8 @@ plot.scenarios<-
 
 # plot variables in scenario
 plot.vars <- 
-  function(weeks, bs.scen, as.scen, indicator, description='') {
+  function(weeks, bs.scen, as.scen, indicator, 
+           description='', xlab='weeks', ylab='units') {
   
   # validar indicator
   index <- match.enum(indicator,INDICATORS)
@@ -47,7 +53,7 @@ plot.vars <-
   grid<-rbind(rep(1, ncols),matrix(cells, ncol = ncols))
   layout(mat = grid, heights = c(0.15, rep(1, nrow(grid)-1)), respect = TRUE)
 
-    # oma e a margem do titulo principal
+  # oma e a margem do titulo principal
   par(oma = c(2,3,2,1))
   
   par(mai=rep(0,4))
@@ -94,8 +100,8 @@ plot.vars <-
   
   title(main=camel.case(paste("evolution of", indicator)), 
         outer=TRUE, cex.main=1.5)
-  title(xlab = camel.case("weeks"),
-        ylab = camel.case("monetary units"), 
+  title(xlab = camel.case(xlab),
+        ylab = camel.case(ylab), 
         outer=TRUE,
         line=0)
 }

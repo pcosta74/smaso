@@ -24,6 +24,12 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
   # Maximum number of iterations
   it <- 75
   
+  hist.quant <- hist
+  hist.quant[1,1:ngoods] <- diag(as.matrix(quant))
+  
+  hist.prod <- hist
+  hist.prod[1,1:ngoods] <- diag(as.matrix(prod))
+  
   hist.prices <- hist
   hist.prices[1,1:ngoods] <- prices
   
@@ -34,8 +40,7 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
   # Initial wealth
   wealth <- wealth(nagents,ngoods,offset,quant,prices)
   
-  hist.wealth <- matrix(rep(0,nagents),1,nagents)
-  hist.wealth <- as.data.frame(hist.wealth)
+  hist.wealth <- hist
   hist.wealth[1,1:nagents] <- wealth
   names(hist.wealth)<-paste("Agent",1:nagents,sep=' ')
 
@@ -70,10 +75,14 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
     hist.wealth <- rbind(hist.wealth, wealth)
     
     prod <- PROD.FUN(prod, offset, quant, prices, beta, cons.fixed, cons.var, unit.cost, it, week)
+    hist.prod <- rbind(hist.prod, diag(as.matrix(prod)))
+    
     cons.var <- apply(prod,1,max) * unit.cost
     quant <- quant - (cons.fixed + cons.var) + prod
-
-    #  cat ("Quantities after production / consumption ", "\n")
+    #hist.quant <- rbind(hist.quant, apply(quant,1,sum))
+    hist.quant <- rbind(hist.quant, diag(as.matrix(quant)))
+    
+        #  cat ("Quantities after production / consumption ", "\n")
     #  print(quant)
     
     # Wealth after production / consumption
@@ -84,6 +93,12 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
   } # end iterate weeks
   
   if(verbose) {
+    cat("Evolution of quantities","\n")
+    print(hist.quant)
+    
+    cat("Evolution of production","\n")
+    print(hist.prod)
+
     cat("Evolution of prices","\n")
     print(hist.prices)
     
@@ -94,7 +109,7 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
     print(hist.utility)
   }
 
-  return(list(hist.prices, hist.wealth, hist.utility))
+  return(list(hist.quant, hist.prod, hist.prices, hist.wealth, hist.utility))
 } # end function Agent.micro.econ
 
 
@@ -205,7 +220,7 @@ utility <- function(quant,beta) {
 
 max.production <- function(nagents, quant, cons.fixed, unit.cost) {
   prod <- (quant[nagents,]-cons.fixed[nagents,])/unit.cost[nagents,]
-  diag(apply(prod,1,min))
+  diag(apply(prod,1,function(p) max(0,min(p))))
 }
 
 const.prod <- function(prod, ...) {
@@ -213,45 +228,44 @@ const.prod <- function(prod, ...) {
 }
 
 max.wealth.prod <- function(prod, offset, quant, prices, beta, 
-                            cons.fixed, cons.var, unit.cost, it, week, sector=AGRC) {
+                            cons.fixed, cons.var, unit.cost, it, week, 
+                            sector=AGRC, agents=AGRC) {
   nagents <- nrow(prod)
   ngoods  <- ncol(prod)
   max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
-
+  exp.prod <- 0
+  
   min <- 0
-  max <- max.prod[sector, sector]
-  quit <- FALSE
+  max <- max.prod[agents, sector]
      
-  expected.production <- 0
-     
-  while(!quit) {
-    quarts  <- quantile(c(min, max), probs=c(.25,0.5,.75))
-    wealths <- sapply(quarts, function(q) {
-      prod[sector, sector] <- q
+  for(iteration in 1:it) {
+    quantile  <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    v.wealth <- sapply(quantile, function(q) {
+      prod[agents, sector] <- q
       cons.var[sector,] <- q * unit.cost[sector,]
       
       quant <- quant - (cons.fixed + cons.var) + prod
       new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                           NULL, NULL, it, week+1)
+                           NULL, NULL, it, week+1,verbose=F)
       new.prices <- new.values[[1]]
       new.quant  <- new.values[[2]]
       new.wealth <- wealth(nagents,ngoods,offset, new.quant, new.prices)
       return(new.wealth[sector])
     })
   
-    if (round(min,2) == round(max,2)) {
-      quit <- TRUE
-    } else if (which.max(wealths) == 1) {
-      max <- quarts[2]
-    } else if (which.max(wealths) == 3) {
-      min <- quarts[2]
-    } else { # which.max(wealths) == 2
-      quit <- TRUE
+    if (round(min,3) == round(max,3)) {
+      break
+    } else if (which.max(v.wealth) == 1) {
+      max <- quantile[2]
+    } else if (which.max(v.wealth) == 3) {
+      min <- quantile[2]
+    } else { # which.max(v.wealth) == 2
+      break
     }
     
-    expected.production <- quarts[2]
+    exp.prod <- quantile[2]
   }
   
-  prod[sector, sector] <- expected.production
+  prod[agents, sector] <- exp.prod
   return(prod)
 }
