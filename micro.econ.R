@@ -70,13 +70,12 @@ Agent.micro.econ <- function(dados,weeks) {
     #  print(round(wealth,1))
     
   } # end iterate weeks
-  #cat("Evolution of prices","\n")
-  #print(hist.prices)
+  cat("Evolution of prices","\n")
+  print(hist.prices)
   
-  #cat("Evolution of wealth of agents","\n")
-  #print(hist.wealth)
-  
-  return(list(prices = hist.prices, wealth = hist.wealth))
+  cat("Evolution of wealth of agents","\n")
+  print(hist.wealth)
+
 } # end function Agent.micro.econ
 
 

@@ -1,16 +1,16 @@
-Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
+Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, ...) {
   
   # *************************************************************
   # Read-in data
   
-  quant <- dados[[QNTT]]
-  prices <- dados[[PRIC]]
-  beta <- dados[[BETA]]
-  hist <- dados[[HIST]] 
-  cons.fixed <- dados[[FCON]] 
-  cons.var <- dados[[VCON]] 
-  prod <- dados[[PROD]]
-  unit.cost <- dados[[UCST]]
+  quant      <- data[[QNTT]]
+  prices     <- data[[PRIC]]
+  beta       <- data[[BETA]]
+  hist       <- data[[HIST]] 
+  cons.fixed <- data[[FCON]] 
+  cons.var   <- data[[VCON]] 
+  prod       <- data[[PROD]]
+  unit.cost  <- data[[UCST]]
   
   # Number of agents and goods
   nagents <- nrow(quant)
@@ -24,12 +24,20 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
   # Maximum number of iterations
   it <- 75
   
-  hist.quant <- hist
-  hist.quant[1,1:ngoods] <- diag(as.matrix(quant))
+  # historic per agent (TEMPLATE)
+  t.hist.per.agent <- matrix(rep(0, nagents), 1, nagents,
+                             dimnames = list(NULL, c(paste("Agent", 1:nagents, sep=' '))))
+  t.hist.per.agent <- as.data.frame(t.hist.per.agent)
+
+  # Initial quantities
+  hist.quant <- t.hist.per.agent
+  hist.quant[1,1:nagents] <- values.per.agent(quant)
   
-  hist.prod <- hist
-  hist.prod[1,1:ngoods] <- diag(as.matrix(prod))
+  # Initial production
+  hist.prod <- t.hist.per.agent
+  hist.prod[1,1:nagents] <- values.per.agent(prod)
   
+  # Initial prices
   hist.prices <- hist
   hist.prices[1,1:ngoods] <- prices
   
@@ -40,11 +48,11 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
   # Initial wealth
   wealth <- wealth(nagents,ngoods,offset,quant,prices)
   
-  hist.wealth <- hist
+  hist.wealth <- t.hist.per.agent
   hist.wealth[1,1:nagents] <- wealth
-  names(hist.wealth)<-paste("Agent",1:nagents,sep=' ')
 
-  hist.utility <- hist.wealth
+  # Initial utility values
+  hist.utility <- t.hist.per.agent
   hist.utility[1,1:nagents] <- utility(quant, beta)
   
   ### Iterate for weeks
@@ -56,7 +64,7 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
     # Call market
     new.values <- market(nagents,ngoods,offset,quant,prices,beta,hist.iter.ex.demand,hist.iter.prices,it,week)
     #  print(new.values)
-    
+
     prices <- new.values[[1]]
     hist.prices <- rbind(hist.prices,prices)
     
@@ -74,15 +82,14 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
     #  print(round(wealth,1))
     hist.wealth <- rbind(hist.wealth, wealth)
     
-    prod <- PROD.FUN(prod, offset, quant, prices, beta, cons.fixed, cons.var, unit.cost, it, week)
-    hist.prod <- rbind(hist.prod, diag(as.matrix(prod)))
+    prod <- PROD.FUN(prod, offset, quant, prices, beta, cons.fixed, cons.var, unit.cost, it, week, ...)
+    cons.var <- apply(prod, 1, max) * unit.cost
+    hist.prod <- rbind(hist.prod, values.per.agent(prod))
     
-    cons.var <- apply(prod,1,max) * unit.cost
     quant <- quant - (cons.fixed + cons.var) + prod
-    #hist.quant <- rbind(hist.quant, apply(quant,1,sum))
-    hist.quant <- rbind(hist.quant, diag(as.matrix(quant)))
-    
-        #  cat ("Quantities after production / consumption ", "\n")
+    hist.quant <- rbind(hist.quant, values.per.agent(quant))
+
+    #  cat ("Quantities after production / consumption ", "\n")
     #  print(quant)
     
     # Wealth after production / consumption
@@ -116,11 +123,10 @@ Agent.micro.econ <- function(dados,weeks,verbose=TRUE,PROD.FUN=`const.prod`) {
 # *****************************************************************
 # Function market establishes new price and quantities (= desired)
 
-market <- function(nagents,ngoods,offset,quant,prices,beta,
-                   hist.iter.ex.demand,hist.iter.prices,it,week,
-                   verbose=F) { 
-  
-  
+market <- function(nagents, ngoods, offset, quant, prices, beta,
+                   hist.iter.ex.demand, hist.iter.prices, it,
+                   week, verbose=F) { 
+
   # Initialization of variables   			
   
   # Create a table of desired quantities filled in with 0's
@@ -204,44 +210,72 @@ market <- function(nagents,ngoods,offset,quant,prices,beta,
   
 } # End function market
 
-wealth <- function(nagents,ngoods,offset,quant,prices) {
+# *****************************************************************
+# Function wealth calculates the wealth of agents
+
+wealth <- function(nagents, ngoods, offset, quant, prices) {
   wealth <- rep(0,nagents)
   for (agent in 1:nagents) { 	# for each agent
     for (good in offset+1:(offset+ngoods)) { 	# for each good 
       wealth[agent]<- sum(quant[agent,]*prices)  
     }}
   return(wealth)
-}
+} # End function wealth
 
-utility <- function(quant,beta) {
+# *****************************************************************
+# Utilitu function
+
+utility <- function(quant, beta) {
   quant[quant<0]<-0
-  apply(beta*log(quant),1,sum)
-}
+  apply(beta*log(quant), 1, sum)
+} # End function utility
 
-max.production <- function(nagents, quant, cons.fixed, unit.cost) {
-  prod <- (quant[nagents,]-cons.fixed[nagents,])/unit.cost[nagents,]
-  diag(apply(prod,1,function(p) max(0,min(p))))
-}
 
+# *****************************************************************
+# Maximum possible production given raw material stock
+
+max.production <- function(agent, quant, cons.fixed, unit.cost) {
+  prod    <- (quant[agent,] - cons.fixed[agent,]) / unit.cost[agent,]
+  prod[,] <- apply(prod, 1, function(p) max(0, min(p)))
+  values.per.agent(prod, simplify = F)
+} # End function max.production
+
+# *****************************************************************
+# Production strategies
+
+# Constant production
 const.prod <- function(prod, ...) {
   prod
-}
+} # Enf function const.prod 
 
+# Alter next week's production to maximize wealth
 max.wealth.prod <- function(prod, offset, quant, prices, beta, 
                             cons.fixed, cons.var, unit.cost, it, week, 
-                            sector=AGRC, agents=AGRC) {
+                            sector=AGRC, agent=agents.in.sector(sector), ...) {
+  
+  # validate sector
+  c<-match.call()
+  tryCatch(
+    match.enum(SECTORS[sector],SECTORS),
+    error = function(e) {
+      e$message<-sub('x','sector',e$message)
+      e$call <- c
+      stop(e)
+    })
+
   nagents <- nrow(prod)
   ngoods  <- ncol(prod)
   max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
   exp.prod <- 0
   
-  min <- 0
-  max <- max.prod[agents, sector]
+  min <- .5 * mean(prod[agent, sector])
+  max <- min(1.5 * mean(prod[agent, sector]), mean(max.prod[agent, sector]))
      
   for(iteration in 1:it) {
+    cat('.')
     quantile  <- quantile(c(min, max), probs=c(.25,0.5,.75))
     v.wealth <- sapply(quantile, function(q) {
-      prod[agents, sector] <- q
+      prod[agent, sector] <- q
       cons.var[sector,] <- q * unit.cost[sector,]
       
       quant <- quant - (cons.fixed + cons.var) + prod
@@ -253,6 +287,7 @@ max.wealth.prod <- function(prod, offset, quant, prices, beta,
       return(new.wealth[sector])
     })
   
+    exp.prod <- quantile[2]
     if (round(min,3) == round(max,3)) {
       break
     } else if (which.max(v.wealth) == 1) {
@@ -262,10 +297,60 @@ max.wealth.prod <- function(prod, offset, quant, prices, beta,
     } else { # which.max(v.wealth) == 2
       break
     }
-    
-    exp.prod <- quantile[2]
   }
+  cat('\n')
   
-  prod[agents, sector] <- exp.prod
+  prod[agent, sector] <- exp.prod
   return(prod)
+} # End function max.wealth.prod
+
+
+# `agents<-` <- function(m,value,...) {
+#   args<-list(...)
+#   
+#   if(args$sector && is.numeric(args$sector)) {
+#     n.agents<-ceiling(nrow(m)/ncol(m))
+#     sector<-as.integer(args$sector)
+#     m[sector*1:n.agents,sector]<-value
+#   } else {
+#     m[,]<-value
+#   }
+#   return(m)
+# }
+
+agents.in.sector <- function(sector, not. = FALSE, data = base) {
+  if(!is.vector(sector) && !is.numeric(sector))
+    stop('sector: wrong data type ',sQuoted(sector))
+  
+  # 'not.' in sector means no production (==0) 
+  op<-ifelse(not.,`==`,`!=`)
+  
+  if(length(sector) == 1)
+    return(which(op(data[[PROD]][, sector],0)))
+  else {
+    w <- which(op(data[[PROD]][, sector],0), arr.ind = T)
+    w <- data.frame(w[,ncol(w):1])
+    w$col <- SECTORS[w$col]
+    names(w) <- c('sector','agent')
+    return(w)
+  }
 }
+
+values.per.agent <- function(x, data=base, simplify=T) {
+  if(!is.data.frame(x))
+    stop('Invalid data type ',sQuote(x), ': expected data.frame, found ',class(x))
+  
+  if(!identical(dim(x),dim(data[[PROD]])))
+    stop('Invalid size: ',sQuote(x), 
+         ': expected ', dim(data[[PROD]]), ', found ', dim(x))
+  
+  i.val <- as.matrix(x * (data[[PROD]]>0))
+  
+  if(simplify)
+    return(i.val[which(i.val>0)])
+  return(i.val)
+}
+
+# Explorar estes conceitos
+# time-discount ???
+# time-preferences vs discount-rate
