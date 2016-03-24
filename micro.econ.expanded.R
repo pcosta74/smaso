@@ -62,7 +62,8 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
     }
     
     # Call market
-    new.values <- market(nagents,ngoods,offset,quant,prices,beta,hist.iter.ex.demand,hist.iter.prices,it,week)
+    new.values <- market(nagents,ngoods,offset,quant,prices,beta,
+                         hist.iter.ex.demand,hist.iter.prices,it,week)
     #  print(new.values)
 
     prices <- new.values[[1]]
@@ -82,7 +83,8 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
     #  print(round(wealth,1))
     hist.wealth <- rbind(hist.wealth, wealth)
     
-    prod <- PROD.FUN(prod, offset, quant, prices, beta, cons.fixed, cons.var, unit.cost, it, week, ...)
+    prod <- PROD.FUN(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
+                     offset, it, week, ...)
     cons.var <- apply(prod, 1, max) * unit.cost
     hist.prod <- rbind(hist.prod, values.per.agent(prod))
     
@@ -249,9 +251,8 @@ const.prod <- function(prod, ...) {
 } # Enf function const.prod 
 
 # Alter next week's production to maximize wealth
-max.wealth.prod <- function(prod, offset, quant, prices, beta, 
-                            cons.fixed, cons.var, unit.cost, it, week, 
-                            sector=AGRC, agent=1, ...) {
+max.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
+                            offset, it, week, sector=AGRC, agent=1, ...) {
   
   # validate sector
   c<-match.call()
@@ -273,7 +274,7 @@ max.wealth.prod <- function(prod, offset, quant, prices, beta,
   
   for(iteration in 1:it) {
     # cat('.')
-    quantiles <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
     trgWealth <- sapply(quantiles, function(q) {
       prod[agent, sector] <- q
       cons.var[sector,]   <- q * unit.cost[sector,]
@@ -307,9 +308,8 @@ max.wealth.prod <- function(prod, offset, quant, prices, beta,
 
 
 # Alter next week's production to maximize profit
-max.profit.prod <- function(prod, offset, quant, prices, beta, 
-                            cons.fixed, cons.var, unit.cost, it, week, 
-                            sector=AGRC, agent=1, ...) {
+max.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
+                            offset, it, week, sector=AGRC, agent=1, ...) {
   
   # validate sector
   c<-match.call()
@@ -331,7 +331,7 @@ max.profit.prod <- function(prod, offset, quant, prices, beta,
   
   for(iteration in 1:it) {
     # cat('.')
-    quantiles <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
     trgProfit <- sapply(quantiles, function(q) {
 
       prod[agent, sector] <- q
@@ -367,9 +367,8 @@ max.profit.prod <- function(prod, offset, quant, prices, beta,
 } # End function max.profit.prod
 
 # Alter next week's production to maximize price
-max.price.prod <- function(prod, offset, quant, prices, beta, 
-                            cons.fixed, cons.var, unit.cost, it, week, 
-                            sector=AGRC, agent=1, ...) {
+max.price.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
+                           offset, it, week, sector=AGRC, agent=1, ...) {
   
   # validate sector
   c<-match.call()
@@ -391,7 +390,7 @@ max.price.prod <- function(prod, offset, quant, prices, beta,
   
   for(iteration in 1:it) {
     # cat('.')
-    quantiles <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
     trgPrice <- sapply(quantiles, function(q) {
       
       prod[agent, sector] <- q
