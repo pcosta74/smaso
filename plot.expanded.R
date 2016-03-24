@@ -10,7 +10,7 @@ plot.scenarios<-
            description='', out.files=FALSE, file.format=NULL) {
     
     setup <- match.enum(setup, SETUPS)
-    file.format <- match.enum(file.format, PLOT.FILE.FORMATS)
+    file.format <- as.character(match.enum(file.format, PLOT.FILE.FORMATS))
 
     for(indicator in levels(INDICATORS)) {
       if(out.files) {

@@ -13,8 +13,9 @@ TESTS <- c(
   #'BLNC.MARK',
   #'SAME.QNTT',
   #'ALTR.PREF',
-  'MXMZ.WLTH',
-  'MXMZ.PRFT',
+  #'MXMZ.WLTH',
+  #'MXMZ.PRFT',
+  'MXMZ.PRIC',
   NULL
 )
 
@@ -22,7 +23,7 @@ TESTS <- c(
 create.base.setup(SETUP)
 
 #
-plot.files <- TRUE
+plot.files <- FALSE
 verbose <- TRUE
 
 #RUNNING AGENT#
@@ -127,6 +128,19 @@ if ('MXMZ.PRFT' %in% TESTS) {
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.profit.prod`, sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
+}
+
+# 8: Maximize profit
+if ('MXMZ.PRIC' %in% TESTS) {
+  sector <- CLTH
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  bs <- Agent.micro.econ(base, WEEKS, verbose)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.price.prod`, sector=sector, agent=agents)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
 }

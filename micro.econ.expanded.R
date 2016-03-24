@@ -364,9 +364,63 @@ max.profit.prod <- function(prod, offset, quant, prices, beta,
   
   prod[agent, sector] <- exp.prod
   return(prod)
-} # End function max.wealth.prod
+} # End function max.profit.prod
 
-
+# Alter next week's production to maximize price
+max.price.prod <- function(prod, offset, quant, prices, beta, 
+                            cons.fixed, cons.var, unit.cost, it, week, 
+                            sector=AGRC, agent=1, ...) {
+  
+  # validate sector
+  c<-match.call()
+  tryCatch(
+    match.enum(SECTORS[sector],SECTORS),
+    error = function(e) {
+      e$message<-sub('x','sector',e$message)
+      e$call <- c
+      stop(e)
+    })
+  
+  nagents <- nrow(prod)
+  ngoods  <- ncol(prod)
+  max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
+  exp.prod <- 0
+  
+  min <- 0
+  max <- max(0, max.prod[agent, sector])
+  
+  for(iteration in 1:it) {
+    # cat('.')
+    quantiles <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    trgPrice <- sapply(quantiles, function(q) {
+      
+      prod[agent, sector] <- q
+      cons.var[sector,]   <- q * unit.cost[sector,]
+      quant <- quant - (cons.fixed + cons.var) + prod
+      
+      # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+      new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                           NULL, NULL, it, week+1,verbose=F)
+      
+      return(new.values[[1]][sector])
+    })
+    
+    exp.prod <- quantiles[2]
+    if (round(min,3) == round(max,3)) {
+      break
+    } else if (which.max(trgPrice) == 1) {
+      max <- quantiles[2]
+    } else if (which.max(trgPrice) == 3) {
+      min <- quantiles[2]
+    } else { # which.max(trgPrice) == 2
+      break
+    }
+  }
+  # cat('\n')
+  
+  prod[agent, sector] <- exp.prod
+  return(prod)
+} # End function max.price.prod
 
 # `agents<-` <- function(m,value,...) {
 #   args<-list(...)
@@ -413,6 +467,7 @@ values.per.agent <- function(x, data=base, simplify=T) {
     return(i.val[data[[ASEC]]])
   return(i.val)
 }
+
 
 # Explorar estes conceitos
 # time-discount ???
