@@ -5,9 +5,8 @@ source('./enums.R')
 PLOT.FILE.FORMATS <- enum(c('bmp','png','jpeg','tiff'))
 
 # plot base and alternative scenarios
-plot.scenarios<-
-  function(weeks, bs.scen, as.scen, setup=NULL,
-           description='', out.files=FALSE, file.format=NULL) {
+plot.scenarios <- function(weeks, bs.scen, as.scen, setup=NULL,
+                           description='', out.files=FALSE, file.format=NULL) {
     
     setup <- match.enum(setup, SETUPS)
     file.format <- as.character(match.enum(file.format, PLOT.FILE.FORMATS))

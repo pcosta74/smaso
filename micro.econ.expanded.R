@@ -285,7 +285,7 @@ max.wealth.prod <- function(prod, offset, quant, prices, beta,
       new.wealth <- wealth(nagents,ngoods,offset, 
                            new.values[[2]], new.values[[1]])
 
-      return(new.wealth[sector])
+      return(new.wealth[agent])
     })
   
     exp.prod <- quantiles[2]
