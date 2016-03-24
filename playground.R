@@ -13,8 +13,8 @@ TESTS <- c(
   #'BLNC.MARK',
   #'SAME.QNTT',
   #'ALTR.PREF',
-  #'MXMZ.WLTH',
-  #'MXMZ.PRFT',
+  'MXMZ.WLTH',
+  'MXMZ.PRFT',
   'MXMZ.PRIC',
   NULL
 )
@@ -103,7 +103,7 @@ if ('ALTR.PREF' %in% TESTS) {
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose)
   
-  plot.scenarios(WEEKS, bs, as, SETUP, "Altered preferences", plot.files)
+  plot.scenarios(WEEKS, bs, as, SETUP, "altered preferences", plot.files)
 }
 
 # 6: Maximize wealth
@@ -114,9 +114,9 @@ if ('MXMZ.WLTH' %in% TESTS) {
   create.alter.setup()
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
-  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.wealth.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, sector=sector, agent=agents)
   
-  plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
+  plot.scenarios(WEEKS, bs, as, SETUP, "maximize wealth", plot.files)  
 }
 
 # 7: Maximize profit
@@ -127,12 +127,12 @@ if ('MXMZ.PRFT' %in% TESTS) {
   create.alter.setup()
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
-  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.profit.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.profit.prod`, sector=sector, agent=agents)
   
-  plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
+  plot.scenarios(WEEKS, bs, as, SETUP, "maximize profit", plot.files)  
 }
 
-# 8: Maximize profit
+# 8: Maximize price
 if ('MXMZ.PRIC' %in% TESTS) {
   sector <- CLTH
   agents <- agents.in.sector(sector)[1]
@@ -140,7 +140,7 @@ if ('MXMZ.PRIC' %in% TESTS) {
   create.alter.setup()
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
-  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.price.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.price.prod`, sector=sector, agent=agents)
   
-  plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
+  plot.scenarios(WEEKS, bs, as, SETUP, "maximize price", plot.files)  
 }
