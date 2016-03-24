@@ -4,7 +4,7 @@ source('./micro.econ.expanded.R')
 source('./plot.expanded.R')
 
 # simulation properties
-WEEKS <- 4
+WEEKS <- 20
 SETUP <- '12x5'
 
 TESTS <- c(
@@ -14,6 +14,7 @@ TESTS <- c(
   #'SAME.QNTT',
   #'ALTR.PREF',
   'MXMZ.WLTH',
+  'MXMZ.PRFT',
   NULL
 )
 
@@ -21,7 +22,7 @@ TESTS <- c(
 create.base.setup(SETUP)
 
 #
-plot.files <- FALSE
+plot.files <- TRUE
 verbose <- TRUE
 
 #RUNNING AGENT#
@@ -106,13 +107,26 @@ if ('ALTR.PREF' %in% TESTS) {
 
 # 6: Maximize wealth
 if ('MXMZ.WLTH' %in% TESTS) {
-  sector = CLTH
-  agents = agents.in.sector(CLTH)[1]
+  sector <- CLTH
+  agents <- agents.in.sector(sector)[1]
   
   create.alter.setup()
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.wealth.prod`, sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
+}
+
+# 7: Maximize profit
+if ('MXMZ.PRFT' %in% TESTS) {
+  sector <- CLTH
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  bs <- Agent.micro.econ(base, WEEKS, verbose)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN = `max.profit.prod`, sector=sector, agent=agents)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)  
 }

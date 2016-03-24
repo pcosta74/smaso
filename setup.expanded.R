@@ -35,7 +35,8 @@ create.base.setup <- function(x) {
   
   # Extend base scenario
   base[[UCST]] <<- base[[VCON]]/apply(base[[PROD]], 1, max)
-
+  base[[ASEC]] <<- base[[PROD]] > 0
+  
   # Change names for labels
   names(base)  <<- levels(VARIABLES)
   

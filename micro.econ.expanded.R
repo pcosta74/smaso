@@ -251,7 +251,7 @@ const.prod <- function(prod, ...) {
 # Alter next week's production to maximize wealth
 max.wealth.prod <- function(prod, offset, quant, prices, beta, 
                             cons.fixed, cons.var, unit.cost, it, week, 
-                            sector=AGRC, agent=agents.in.sector(sector), ...) {
+                            sector=AGRC, agent=1, ...) {
   
   # validate sector
   c<-match.call()
@@ -268,41 +268,104 @@ max.wealth.prod <- function(prod, offset, quant, prices, beta,
   max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
   exp.prod <- 0
   
-  min <- .5 * mean(prod[agent, sector])
-  max <- min(1.5 * mean(prod[agent, sector]), mean(max.prod[agent, sector]))
-     
+  min <- 0
+  max <- max(0, max.prod[agent, sector])
+  
   for(iteration in 1:it) {
-    cat('.')
-    quantile  <- quantile(c(min, max), probs=c(.25,0.5,.75))
-    v.wealth <- sapply(quantile, function(q) {
+    # cat('.')
+    quantiles <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    trgWealth <- sapply(quantiles, function(q) {
       prod[agent, sector] <- q
-      cons.var[sector,] <- q * unit.cost[sector,]
-      
+      cons.var[sector,]   <- q * unit.cost[sector,]
       quant <- quant - (cons.fixed + cons.var) + prod
+
+      # Get new values for prices ([[1]]) and adquired quantities ([[2]])
       new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
                            NULL, NULL, it, week+1,verbose=F)
-      new.prices <- new.values[[1]]
-      new.quant  <- new.values[[2]]
-      new.wealth <- wealth(nagents,ngoods,offset, new.quant, new.prices)
+      new.wealth <- wealth(nagents,ngoods,offset, 
+                           new.values[[2]], new.values[[1]])
+
       return(new.wealth[sector])
     })
   
-    exp.prod <- quantile[2]
+    exp.prod <- quantiles[2]
     if (round(min,3) == round(max,3)) {
       break
-    } else if (which.max(v.wealth) == 1) {
-      max <- quantile[2]
-    } else if (which.max(v.wealth) == 3) {
-      min <- quantile[2]
-    } else { # which.max(v.wealth) == 2
+    } else if (which.max(trgWealth) == 1) {
+      max <- quantiles[2]
+    } else if (which.max(trgWealth) == 3) {
+      min <- quantiles[2]
+    } else { # which.max(trgWealth) == 2
       break
     }
   }
-  cat('\n')
+  # cat('\n')
   
   prod[agent, sector] <- exp.prod
   return(prod)
 } # End function max.wealth.prod
+
+
+# Alter next week's production to maximize profit
+max.profit.prod <- function(prod, offset, quant, prices, beta, 
+                            cons.fixed, cons.var, unit.cost, it, week, 
+                            sector=AGRC, agent=1, ...) {
+  
+  # validate sector
+  c<-match.call()
+  tryCatch(
+    match.enum(SECTORS[sector],SECTORS),
+    error = function(e) {
+      e$message<-sub('x','sector',e$message)
+      e$call <- c
+      stop(e)
+    })
+  
+  nagents <- nrow(prod)
+  ngoods  <- ncol(prod)
+  max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
+  exp.prod <- 0
+  
+  min <- 0
+  max <- max(0, max.prod[agent, sector])
+  
+  for(iteration in 1:it) {
+    # cat('.')
+    quantiles <- quantile(c(min, max), probs=c(.25,0.5,.75))
+    trgProfit <- sapply(quantiles, function(q) {
+
+      prod[agent, sector] <- q
+      cons.var[sector,]   <- q * unit.cost[sector,]
+      quant <- quant - (cons.fixed + cons.var) + prod
+      
+      # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+      new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                           NULL, NULL, it, week+1,verbose=F)
+
+      cons.total <- cons.var[agent, ] + cons.fixed[agent, ]
+      unit.cost  <- sum(cons.total * prices) / prod[agent, sector]
+      profit.margin <- new.values[[1]][sector] - 100 * unit.cost / new.values[[1]][sector] 
+      
+      return(profit.margin)
+    })
+    
+    exp.prod <- quantiles[2]
+    if (round(min,3) == round(max,3)) {
+      break
+    } else if (which.max(trgProfit) == 1) {
+      max <- quantiles[2]
+    } else if (which.max(trgProfit) == 3) {
+      min <- quantiles[2]
+    } else { # which.max(trgProfit) == 2
+      break
+    }
+  }
+  # cat('\n')
+  
+  prod[agent, sector] <- exp.prod
+  return(prod)
+} # End function max.wealth.prod
+
 
 
 # `agents<-` <- function(m,value,...) {
@@ -340,14 +403,14 @@ values.per.agent <- function(x, data=base, simplify=T) {
   if(!is.data.frame(x))
     stop('Invalid data type ',sQuote(x), ': expected data.frame, found ',class(x))
   
-  if(!identical(dim(x),dim(data[[PROD]])))
+  if(!identical(dim(x), dim(data[[ASEC]])))
     stop('Invalid size: ',sQuote(x), 
-         ': expected ', dim(data[[PROD]]), ', found ', dim(x))
+         ': expected ', dim(data[[ASEC]]), ', found ', dim(x))
   
-  i.val <- as.matrix(x * (data[[PROD]]>0))
+  i.val <- as.matrix(x * (data[[ASEC]]>0))
   
   if(simplify)
-    return(i.val[which(i.val>0)])
+    return(i.val[data[[ASEC]]])
   return(i.val)
 }
 

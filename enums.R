@@ -1,7 +1,7 @@
 source('./utils.R')
 
 SETUPS <- enum(c('4x4','12x5'))
-VARIABLES <- enum(c('QNTT','PRIC','BETA','HIST','FCON','VCON','PROD','UCST'))
+VARIABLES <- enum(c('QNTT','PRIC','BETA','HIST','FCON','VCON','PROD','UCST','ASEC'))
 INDICATORS <- enum(c('quantities','production','prices','wealth','utility'))
 
 dim.setup<-function(x) {
