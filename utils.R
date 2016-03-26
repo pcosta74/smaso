@@ -38,12 +38,19 @@ match.enum <- function(x , enum) {
 }
 
 
-tree.new <- function(depth, children) {
-  calling. <- match.call()
-  
-  # Create empty tree
+tree.new <- function(depth, children, value=NULL) {
+
   size <- tree.size(depth=depth, children=children)
-  tree <- ifelse(depth < 1 || children < 1, list(), list(rep(NA, size)))
+  if(depth < 1 || children < 1)
+    tree <- list()
+  else if(is.null(value))
+    tree <- list(rep(NA, size))
+  else {
+    value <- unlist(value)
+    if(size < length(value))
+      warning('number of items exceeds tree size')
+    tree <- list(value[1:size])
+  }
   class(tree) <- append(class(tree),'tree')
   attr(tree,'depth') <- depth
   attr(tree,'children') <- children
@@ -56,15 +63,12 @@ tree.size  <- function(tree=NULL, depth=NULL, children=NULL) {
   
   # Validate parameters
   if(is.null(tree)) {
-    
     if(is.null(depth)) 
       stop(paste('undefined',sQuote('depth')))
     
     if(is.null(children))
       stop(paste('undefined',sQuote('children')))
-    
   } else {
-    
     tryCatch(
       stopifnot('tree' %in% class(tree)),
       error = function(e) {
@@ -87,6 +91,7 @@ tree.size  <- function(tree=NULL, depth=NULL, children=NULL) {
 }
 
 tree.node.children <- function(tree, node, index.=F) {
+
   .R.OFFSET <- 1
   calling.  <- match.call()
   children  <- attr(tree,'children')
@@ -112,7 +117,8 @@ tree.node.parent <- function(tree, node, index.=F) {
   .R.OFFSET <- 1
   calling.  <- match.call()
   children  <- attr(tree,'children')
-  math.expr <- ((node - 1) %/% children) + .R.OFFSET
+  nod_fset  <- node - .R.OFFSET
+  math.expr <- .R.OFFSET + nod_fset%/%children - (!(nod_fset%%children))
   
   if(index.) return(math.expr)
   return(tree.get.nodes(tree, node, math.expr))
@@ -123,7 +129,8 @@ tree.node.parent <- function(tree, node, index.=F) {
   .R.OFFSET <- 1
   calling.  <- match.call()
   children  <- attr(tree,'children')
-  math.expr <- ((node - 1) %/% children) + .R.OFFSET
+  nod_fset  <- node - .R.OFFSET
+  math.expr <- .R.OFFSET + nod_fset%/%children - (!(nod_fset%%children))
   
   tree.set.nodes(tree, node, math.expr) <- value
   return(tree)
@@ -162,24 +169,52 @@ tree.path <- function(tree, from=1, to=length(tree), index.=F) {
 }
 
 tree.get.nodes <- function(tree, node, expr) {
+  if(node < .R.OFFSET || node > length(tree[[1]])) {
+    warning(paste('node', sQuote(node), 'does not exist in tree'))
+    return(NULL)    
+  }
+
+  if(any(expr < .R.OFFSET) || any(expr > length(tree[[1]]))) {
+    warning(paste('requested nodes (', paste(expr,collapse=','),
+                  ') do not exist in tree', sep=""))
+    return(NULL)    
+  }
+  
   nodes <- tree[[1]][expr]
-  names(nodes)<-as.character(expr)
+  names(nodes) <- as.character(expr)
   return(nodes)
 }
 
 `tree.set.nodes<-` <- function(tree, node, expr, value) {
-  tree[[1]][expr] <- value
   
-  children <- tree(tree,'children')
-  attr(tree,'depth') <- trunc(log(length(tree[[1]]), children)) + 1
+  if(node < .R.OFFSET) {
+    warning(paste('node', sQuote(node), 'does not exist in tree'))
+    return(tree)    
+  }
+  if(any(expr < .R.OFFSET)) {
+    warning(paste('requested nodes (',paste(expr,collapse=','),
+                  ') do not exist in tree', sep=""))
+    return(tree)    
+  }
+  
+  tree[[1]][expr] <- value
+
+  children <- attr(tree,'children')
+  olddepth <- attr(tree,'depth')
+  newdepth <- trunc(log(length(tree[[1]]), children)) + 1
+  attr(tree,'depth') <- newdepth
+  
+  print(newdepth - olddepth)
+  
+  if(newdepth - olddepth > 2) {
+    warning('unexpected leap in tree depth:', newdepth - olddepth)
+  }
 
   return(tree)
 }
 
 length.tree <- function(x) {
-  if(inherits(x,'tree')) {
-    length(x[[1]])
-  }
+  if(inherits(x,'tree')) length(x[[1]])
   else UseMethod('length',x)
 }
 
@@ -193,18 +228,29 @@ plot.tree <- function(x, ...) {
     if(exists('a$layout')) l = a$layout
     else l = layout.reingold.tilford(g, root=1)
     
-    plot(g, layout = l, vertex.label=x[[1]], ...)
+    plot(g, layout = l, edge.arrow.size = 0.2,
+         vertex.label=x[[1]], vertex.label.cex=0.8, vertex.size=20, ...)
   }
   else UseMethod('plot',x)
 }
 
-print.tree <- function(x, index.=F, ...) {
+print.tree <- function(x, index.=F, pretty.=F, ...) {
   if(inherits(x,'tree')) {
     cat(paste('depth:', attr(x,'depth'),'\t'))
     cat(paste('children:', attr(x,'children'),'\n'))
     if(index.) {
       names(x[[1]])<-1:length(t)
       print(x[[1]])
+    } 
+    else if(pretty. && length(t)>1) {
+      .R.OFFSET <- 1
+      buffer <- c()
+      for(node in 2:length(t)) {
+        nod_fset <- node-.R.OFFSET
+        str <- paste(.R.OFFSET + nod_fset%/%children - (!(nod_set%%children)),'->',node)
+        buffer <- c(buffer, str)
+      }
+      cat(paste(buffer,collapse=', ',sep='\n'))
     }
     else cat(x[[1]],'\n')
   }
