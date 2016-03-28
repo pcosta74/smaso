@@ -12,7 +12,9 @@ TESTS <- c(
   #'MXMZ.WLTH',
   #'MXMZ.PRFT',
   #'MXMZ.PRIC',
-  'PLAN.PRFT',
+  #'PLAN.PRFT',
+  'MXMZ.WLTH.PREF.VAR',
+  #'MXMZ.WLTH.REG.PRICES',
   NULL
 )
 
@@ -40,7 +42,7 @@ if ('ALTR.RTIO' %in% TESTS) {
   create.alter.setup(prod.delta = p.mtx, vcons.delta = v.mtx)
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose)
-
+  
   plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)
 }
 
@@ -65,7 +67,7 @@ if ('BLNC.MARK' %in% TESTS) {
   sector <- CLTH
   agents <- agents.in.sector(sector)
   others <- agents.in.sector(sector, not. = T)
-
+  
   create.alter.setup()
   alter[[PROD]][agents,sector] <- alter[[PROD]][agents,sector] + dlt
   alter[[VCON]][others,sector] <- alter[[VCON]][others,sector] + dlt/3
@@ -154,4 +156,33 @@ if ('PLAN.PRFT' %in% TESTS) {
                          sector=sector, agent=agents, prod.incr=0.10, periods=2)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "planned profit", plot.files)  
+}
+
+
+# 10: Maximize wealth with variable preferences
+if ('MXMZ.WLTH.PREF.VAR' %in% TESTS) {
+  sector <- CLTH #CLTH #AGRC #TRNS #FUEL #HLTH #MNY
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  #compares max.wealth.prod without vs with variable preferences
+  bs <- Agent.micro.econ(base, WEEKS, verbose, PROD.FUN=`max.wealth.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, BETA.VAR = `var.beta`, sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "variable preferences", plot.files)  
+}
+
+# 11: Maximize wealth with Regulated Prices
+if ('MXMZ.WLTH.REG.PRICES' %in% TESTS) {
+  sector <- CLTH #CLTH #AGRC #TRNS #FUEL #HLTH #MNY
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  #compares max.wealth.prod without vs with regulated prices ( PRICE.FACTOR = c(min.price.factor,max.price.factor) )
+  bs <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, PRICE.FACTOR = c(0.25,4), sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "regulated prices", plot.files)  
 }
