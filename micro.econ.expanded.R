@@ -1,7 +1,7 @@
 source(file.path('.','tree.R'))
 
 
-Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, ...) {
+Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, BETA.VAR = `base.beta`, PRICE.FACTOR = c(-Inf,Inf), ...) {
   
   # *************************************************************
   # Read-in data
@@ -26,6 +26,9 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
   
   # Maximum number of iterations
   it <- 75
+  
+  # Price Mínimum and Maximum
+  price.limits <- list(PRICE.FACTOR[1]*prices,PRICE.FACTOR[2]*prices)  
   
   # historic per agent (TEMPLATE)
   t.hist.per.agent <- matrix(rep(0, nagents), 1, nagents,
@@ -66,7 +69,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
     
     # Call market
     new.values <- market(nagents,ngoods,offset,quant,prices,beta,
-                         hist.iter.ex.demand,hist.iter.prices,it,week)
+                         hist.iter.ex.demand,hist.iter.prices,it,week,price.min.max=price.limits)
     #  print(new.values)
 
     prices <- new.values[[1]]
@@ -75,7 +78,11 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
     quant <- new.values[[2]]
     util <- utility(quant,beta)
     hist.utility <- rbind(hist.utility,util)
-    
+
+    #CHANGE PREFERENCES
+    beta <- BETA.VAR(beta, data[[BETA]], data[[PRIC]], prices,3,1)
+    #    print(beta)    
+  
     # Initial wealth
     #  cat("Initial wealth","\n")
     #  print(round(wealth,1))
@@ -87,7 +94,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
     hist.wealth <- rbind(hist.wealth, wealth)
     
     prod <- PROD.FUN(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
-                     offset, it, week, ...)
+                     offset, it, week, price.limits,...)
     cons.var  <- apply(prod, 1, max) * unit.cost
     hist.prod <- rbind(hist.prod, values.per.agent(prod))
     
@@ -130,7 +137,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
 
 market <- function(nagents, ngoods, offset, quant, prices, beta,
                    hist.iter.ex.demand, hist.iter.prices, it,
-                   week, verbose=F) { 
+                   week, verbose=F, price.min.max) { 
 
   # Initialization of variables   			
   
@@ -177,8 +184,9 @@ market <- function(nagents, ngoods, offset, quant, prices, beta,
       tot.ex.demand[good]<-sum(ex.demand[,good])  
       
       # Adjust the prices 
-      prices[good]<-prices[good]*(1+tot.ex.demand[good]/(2* sum(quant[,good]) )) 
-      
+      prices[good]<-max(price.min.max[[1]][good],
+                        min(prices[good]*(1+tot.ex.demand[good]/(2* sum(quant[,good]))),
+                            price.min.max[[2]][good]))      
     } # For each good
     
     # Communicate the values of excess demand
@@ -246,6 +254,49 @@ max.production <- function(agent, quant, cons.fixed, unit.cost) {
 } # End function max.production
 
 # *****************************************************************
+# Update preferences (betas)
+
+# We use elipses to determine the new beta, given the new price.
+# If Price < Setup price: new beta = (1/P)*((B-1) * sqrt(2*P*x - x^2) + M*P)
+# Else:                   new beta = (1/(f*P))*(B*sqrt((f^2)*(P^2)-P^2+2*P*x-x^2))
+#
+# Where:
+#   x <- new price
+#   P <- initial price (defined in setup)
+#   B <- initial beta (defined in setup)
+#   M <- maximum preference (tipically = 1)
+#   f <- multiplicative factor (if price is growing, the new beta will be 0 when price = initial price*(1+f) ) We use 5 as base case
+#
+
+update.betas <- function(beta_inic, orig_prices, prices, f=5, M=1)  {
+  temp_prefs <- rep(0,4)
+  max_prices <- orig_prices*(1+f)
+  for (i in 1:length(orig_prices)) {
+    if (prices[i]<orig_prices[i] & prices[i] > 0) {  
+      temp_prefs[i] <- (1/orig_prices[i])*((beta_inic[1,i]-1) * sqrt(2*orig_prices[i]*prices[i] - prices[i]^2) + M*orig_prices[i]) ###em beta, assumimos que que são iguais para todos os consumidores; por isso podemos invocar o indice de linha 1 (agente 1)
+    } else if (prices[i]>=orig_prices[i] & prices[i] < max_prices[i]){
+      temp_prefs[i] <- (1/(f*orig_prices[i]))*(beta_inic[1,i]*sqrt((f^2)*(orig_prices[i]^2)-(orig_prices[i]^2)+2*orig_prices[i]*prices[i]-prices[i]^2))
+    } else {
+      temp_prefs[i] <- 0.001
+    }
+  }   
+  return(temp_prefs)
+}
+
+base.beta <- function(beta, beta_inic, orig_prices, prices,f,M=1) {
+  return(beta)
+}
+
+var.beta <- function(beta, beta_inic, orig_prices, prices,f,M=1) {
+  new.betas <- update.betas(beta_inic, orig_prices, prices,f,M)
+  for (i in 1:dim(beta)[1]) {
+    beta[i,] <- new.betas
+  }
+  return(beta)
+}
+
+
+# *****************************************************************
 # Production strategies
 
 # Constant production
@@ -273,7 +324,7 @@ max.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
 
 # Alter next week's production to maximize wealth
 max.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
-                            unit.cost, offset, it, week, ...) {
+                            unit.cost, offset, it, week, price.limits, ...) {
 
   environment(max.FUN.prod) <- environment()
   max.FUN.prod(`predict.wealth`, ...)
@@ -308,7 +359,7 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1,...) {
     trgValues <- sapply(quantiles, FUN, 
                         prod, quant, prices, beta, cons.fixed, cons.var,
                         unit.cost, offset, it, week, sector, agent, 
-                        nagents, ngoods, ...)
+                        nagents, ngoods, price.limits, ...)
     
     exp.prod <- quantiles[2]
     if (round(min,3) == round(max,3)) {
@@ -330,7 +381,7 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1,...) {
 #
 predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
                           unit.cost, offset, it, week, sector, agent, 
-                          nagents, ngoods, ...) {
+                          nagents, ngoods, price.limits, ...) {
   
   prod[agent, sector] <- q
   cons.var[sector,]   <- q * unit.cost[sector,]
@@ -338,7 +389,7 @@ predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
   
   # Get new values for prices ([[1]]) and adquired quantities ([[2]])
   new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                       NULL, NULL, it, week+1,verbose=F)
+                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
   
   return(new.values[[1]][sector])
 } # End function predict.price
@@ -346,7 +397,7 @@ predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
 #
 predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
                           unit.cost, offset, it, week, sector, agent, 
-                          nagents, ngoods, ...) {
+                          nagents, ngoods, price.limits, ...) {
   
   prod[agent, sector] <- q
   cons.var[sector,]   <- q * unit.cost[sector,]
@@ -354,7 +405,7 @@ predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
   
   # Get new values for prices ([[1]]) and adquired quantities ([[2]])
   new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                       NULL, NULL, it, week+1,verbose=F)
+                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
   
   cons.total <- cons.var[agent, ] + cons.fixed[agent, ]
   unit.cost  <- sum(cons.total * prices) / prod[agent, sector]
@@ -366,7 +417,7 @@ predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
 #
 predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
                            unit.cost, offset, it, week, sector, agent, 
-                           nagents, ngoods, ...) {
+                           nagents, ngoods, price.limits, ...) {
   
   prod[agent, sector] <- q
   cons.var[sector,]   <- q * unit.cost[sector,]
@@ -374,7 +425,7 @@ predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
   
   # Get new values for prices ([[1]]) and adquired quantities ([[2]])
   new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                       NULL, NULL, it, week+1,verbose=F)
+                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
   new.wealth <- wealth(nagents,ngoods,offset, 
                        new.values[[2]], new.values[[1]])
   

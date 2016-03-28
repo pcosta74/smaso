@@ -4,7 +4,7 @@ source(file.path('.','micro.econ.expanded.R'))
 source(file.path('.','plot.expanded.R'))
 
 # simulation properties
-WEEKS <- 20
+WEEKS <- 10
 SETUP <- '12x5'
 
 TESTS <- c(
@@ -12,7 +12,9 @@ TESTS <- c(
   #'MXMZ.WLTH',
   #'MXMZ.PRFT',
   #'MXMZ.PRIC',
-  'PLAN.PRFT',
+  #'PLAN.PRFT',
+  #'MXMZ.WLTH.PREF.VAR',
+  'MXMZ.WLTH.REG.PRICES',
   NULL
 )
 
@@ -153,4 +155,33 @@ if ('PLAN.PRFT' %in% TESTS) {
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`planned.profit.prod`, sector=sector, agent=agents)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "planned profit", plot.files)  
+}
+
+
+# 10: Maximize wealth with variable preferences
+if ('MXMZ.WLTH.PREF.VAR' %in% TESTS) {
+  sector <- CLTH #CLTH #AGRC #TRNS #FUEL #HLTH #MNY
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  #compares max.wealth.prod without vs with variable preferences
+  bs <- Agent.micro.econ(base, WEEKS, verbose, PROD.FUN=`max.wealth.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, BETA.VAR = `var.beta`, sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "variable preferences", plot.files)  
+}
+
+# 11: Maximize wealth with Regulated Prices
+if ('MXMZ.WLTH.REG.PRICES' %in% TESTS) {
+  sector <- CLTH #CLTH #AGRC #TRNS #FUEL #HLTH #MNY
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  #compares max.wealth.prod without vs with regulated prices ( PRICE.FACTOR = c(min.price.factor,max.price.factor) )
+  bs <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, PRICE.FACTOR = c(0.25,4), sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "regulated prices", plot.files)  
 }
