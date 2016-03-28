@@ -13,8 +13,8 @@ TESTS <- c(
   #'MXMZ.PRFT',
   #'MXMZ.PRIC',
   #'PLAN.PRFT',
-  #'MXMZ.WLTH.PREF.VAR',
-  'MXMZ.WLTH.REG.PRICES',
+  'MXMZ.WLTH.PREF.VAR',
+  #'MXMZ.WLTH.REG.PRICES',
   NULL
 )
 
@@ -42,7 +42,7 @@ if ('ALTR.RTIO' %in% TESTS) {
   create.alter.setup(prod.delta = p.mtx, vcons.delta = v.mtx)
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose)
-
+  
   plot.scenarios(WEEKS, bs, as, SETUP, "altered ratio", plot.files)
 }
 
@@ -67,7 +67,7 @@ if ('BLNC.MARK' %in% TESTS) {
   sector <- CLTH
   agents <- agents.in.sector(sector)
   others <- agents.in.sector(sector, not. = T)
-
+  
   create.alter.setup()
   alter[[PROD]][agents,sector] <- alter[[PROD]][agents,sector] + dlt
   alter[[VCON]][others,sector] <- alter[[VCON]][others,sector] + dlt/3
