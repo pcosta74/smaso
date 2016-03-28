@@ -1,7 +1,7 @@
-source('./properties.R')
-source('./enums.R')
-source('./utils.R')
-source('./setup.R')
+source(file.path('.','properties.R'))
+source(file.path('.','enums.R'))
+source(file.path('.','utils.R'))
+source(file.path('.','setup.R'))
 
 #
 # Choose setup

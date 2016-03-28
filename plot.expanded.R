@@ -1,5 +1,5 @@
-source('./properties.R')
-source('./enums.R')
+source(file.path('.','properties.R'))
+source(file.path('.','enums.R'))
 
 # export file formats 
 PLOT.FILE.FORMATS <- enum(c('bmp','png','jpeg','tiff'))

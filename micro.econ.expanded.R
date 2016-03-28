@@ -1,3 +1,6 @@
+source(file.path('.','tree.R'))
+
+
 Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, ...) {
   
   # *************************************************************
@@ -85,7 +88,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, .
     
     prod <- PROD.FUN(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
                      offset, it, week, ...)
-    cons.var <- apply(prod, 1, max) * unit.cost
+    cons.var  <- apply(prod, 1, max) * unit.cost
     hist.prod <- rbind(hist.prod, values.per.agent(prod))
     
     quant <- quant - (cons.fixed + cons.var) + prod
@@ -250,66 +253,36 @@ const.prod <- function(prod, ...) {
   prod
 } # Enf function const.prod 
 
+# Alter next week's production to maximize price
+max.price.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
+                           offset, it, week, ...) {
+
+  environment(max.FUN.prod) <- environment()
+  max.FUN.prod(`predict.price`, ...)
+  
+} # End function max.price.prod
+
+# Alter next week's production to maximize profit
+max.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
+                            unit.cost, offset, it, week, ...) {
+  
+  environment(max.FUN.prod) <- environment()
+  max.FUN.prod(`predict.profit`, ...)
+  
+} # End function max.profit.prod
+
 # Alter next week's production to maximize wealth
-max.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
-                            offset, it, week, sector=AGRC, agent=1, ...) {
-  
-  # validate sector
-  c<-match.call()
-  tryCatch(
-    match.enum(SECTORS[sector],SECTORS),
-    error = function(e) {
-      e$message<-sub('x','sector',e$message)
-      e$call <- c
-      stop(e)
-    })
+max.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
+                            unit.cost, offset, it, week, ...) {
 
-  nagents <- nrow(prod)
-  ngoods  <- ncol(prod)
-  max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
-  exp.prod <- 0
-  
-  min <- 0
-  max <- max(0, max.prod[agent, sector])
-  
-  for(iteration in 1:it) {
-    # cat('.')
-    quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
-    trgWealth <- sapply(quantiles, function(q) {
-      prod[agent, sector] <- q
-      cons.var[sector,]   <- q * unit.cost[sector,]
-      quant <- quant - (cons.fixed + cons.var) + prod
+  environment(max.FUN.prod) <- environment()
+  max.FUN.prod(`predict.wealth`, ...)
 
-      # Get new values for prices ([[1]]) and adquired quantities ([[2]])
-      new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                           NULL, NULL, it, week+1,verbose=F)
-      new.wealth <- wealth(nagents,ngoods,offset, 
-                           new.values[[2]], new.values[[1]])
-
-      return(new.wealth[agent])
-    })
-  
-    exp.prod <- quantiles[2]
-    if (round(min,3) == round(max,3)) {
-      break
-    } else if (which.max(trgWealth) == 1) {
-      max <- quantiles[2]
-    } else if (which.max(trgWealth) == 3) {
-      min <- quantiles[2]
-    } else { # which.max(trgWealth) == 2
-      break
-    }
-  }
-  # cat('\n')
-  
-  prod[agent, sector] <- exp.prod
-  return(prod)
 } # End function max.wealth.prod
 
 
-# Alter next week's production to maximize profit
-max.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
-                            offset, it, week, sector=AGRC, agent=1, ...) {
+# Alter next week's production to maximize function FUN
+max.FUN.prod <- function(FUN, sector=AGRC, agent=1,...) {
   
   # validate sector
   c<-match.call()
@@ -332,31 +305,19 @@ max.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, uni
   for(iteration in 1:it) {
     # cat('.')
     quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
-    trgProfit <- sapply(quantiles, function(q) {
-
-      prod[agent, sector] <- q
-      cons.var[sector,]   <- q * unit.cost[sector,]
-      quant <- quant - (cons.fixed + cons.var) + prod
-      
-      # Get new values for prices ([[1]]) and adquired quantities ([[2]])
-      new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                           NULL, NULL, it, week+1,verbose=F)
-
-      cons.total <- cons.var[agent, ] + cons.fixed[agent, ]
-      unit.cost  <- sum(cons.total * prices) / prod[agent, sector]
-      profit.margin <- new.values[[1]][sector] - 100 * unit.cost / new.values[[1]][sector] 
-      
-      return(profit.margin)
-    })
+    trgValues <- sapply(quantiles, FUN, 
+                        prod, quant, prices, beta, cons.fixed, cons.var,
+                        unit.cost, offset, it, week, sector, agent, 
+                        nagents, ngoods, ...)
     
     exp.prod <- quantiles[2]
     if (round(min,3) == round(max,3)) {
       break
-    } else if (which.max(trgProfit) == 1) {
+    } else if (which.max(trgValues) == 1) {
       max <- quantiles[2]
-    } else if (which.max(trgProfit) == 3) {
+    } else if (which.max(trgValues) == 3) {
       min <- quantiles[2]
-    } else { # which.max(trgProfit) == 2
+    } else { # which.max(trgValues) == 2
       break
     }
   }
@@ -364,75 +325,130 @@ max.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, uni
   
   prod[agent, sector] <- exp.prod
   return(prod)
-} # End function max.profit.prod
+} # End function max.FUN.prod
 
-# Alter next week's production to maximize price
-max.price.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, unit.cost, 
-                           offset, it, week, sector=AGRC, agent=1, ...) {
+#
+predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
+                          unit.cost, offset, it, week, sector, agent, 
+                          nagents, ngoods, ...) {
   
-  # validate sector
-  c<-match.call()
-  tryCatch(
-    match.enum(SECTORS[sector],SECTORS),
-    error = function(e) {
-      e$message<-sub('x','sector',e$message)
-      e$call <- c
-      stop(e)
-    })
+  prod[agent, sector] <- q
+  cons.var[sector,]   <- q * unit.cost[sector,]
+  quant <- quant - (cons.fixed + cons.var) + prod
   
-  nagents <- nrow(prod)
-  ngoods  <- ncol(prod)
-  max.prod <- max.production(1:nagents, quant, cons.fixed, unit.cost)
-  exp.prod <- 0
+  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                       NULL, NULL, it, week+1,verbose=F)
   
-  min <- 0
-  max <- max(0, max.prod[agent, sector])
+  return(new.values[[1]][sector])
+} # End function predict.price
+
+#
+predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
+                          unit.cost, offset, it, week, sector, agent, 
+                          nagents, ngoods, ...) {
   
-  for(iteration in 1:it) {
-    # cat('.')
-    quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
-    trgPrice <- sapply(quantiles, function(q) {
+  prod[agent, sector] <- q
+  cons.var[sector,]   <- q * unit.cost[sector,]
+  quant <- quant - (cons.fixed + cons.var) + prod
+  
+  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                       NULL, NULL, it, week+1,verbose=F)
+  
+  cons.total <- cons.var[agent, ] + cons.fixed[agent, ]
+  unit.cost  <- sum(cons.total * prices) / prod[agent, sector]
+  profit.margin <- new.values[[1]][sector] - 100 * unit.cost / new.values[[1]][sector] 
+  
+  return(profit.margin)
+} # End function predict.profit
+
+#
+predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
+                           unit.cost, offset, it, week, sector, agent, 
+                           nagents, ngoods, ...) {
+  
+  prod[agent, sector] <- q
+  cons.var[sector,]   <- q * unit.cost[sector,]
+  quant <- quant - (cons.fixed + cons.var) + prod
+  
+  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                       NULL, NULL, it, week+1,verbose=F)
+  new.wealth <- wealth(nagents,ngoods,offset, 
+                       new.values[[2]], new.values[[1]])
+  
+  return(new.wealth[agent])
+} # End function predict.wealth
+
+
+# *****************************************************************
+# Plan productio to maximize profit
+
+planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
+                                unit.cost, offset, it, week, sector=AGRC, agent=1, 
+                                prod.incr=0.10, periods=5,...) {
+  
+  #force integer numbers
+  period.starts <- round(quantile(1:(WEEKS+1), probs=seq(0,1,1/periods)))
+  percentiles   <- quantile(0:100, probs=seq(0,1,prod.incr))
+  
+  # Forget previous plans (if any)
+  if(week == 1) plan <<- NULL
+  
+  # locate week in periods
+  no.weeks <- sum(week >= period.starts)
+  no.weeks <- period.starts[no.weeks+1]-period.starts[no.weeks]
+  
+  if(week %in% period.starts) {
+
+    # create plan
+    children <- length(percentiles)
+    prev.val <- ifelse(is.null(plan), prod[agent,sector], plan[length(plan)]) 
+
+    plan.tree <- tree.new(no.weeks+1, children)
+    plan.tree[[1]] <- list(VAR=0, QNTT=quant, PROD=prod, VCON=cons.var)
+
+    # populate tree with predictions
+    goal   <- tree.size(NULL, no.weeks, children)
+    open   <- c(1)
+    closed <- c()
+
+    while(length(open)) {
+      # BREADTH-FIRST vs DEPTH-FIRST
+      current <- ifelse(TRUE, open[1], open[length(open)])
+      children <- tree.node.children(plan.tree, current, index.=T)
+
+      consider.prods <- plan.tree[[current]]$PROD[agent,sector] * percentiles
+      tree.node.children(plan.tree, current) <- sapply(consider.prods, function(p) {
+        list(plan.tree[[1]]) # TBD 
+      })
       
-      prod[agent, sector] <- q
-      cons.var[sector,]   <- q * unit.cost[sector,]
-      quant <- quant - (cons.fixed + cons.var) + prod
-      
-      # Get new values for prices ([[1]]) and adquired quantities ([[2]])
-      new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                           NULL, NULL, it, week+1,verbose=F)
-      
-      return(new.values[[1]][sector])
-    })
-    
-    exp.prod <- quantiles[2]
-    if (round(min,3) == round(max,3)) {
-      break
-    } else if (which.max(trgPrice) == 1) {
-      max <- quantiles[2]
-    } else if (which.max(trgPrice) == 3) {
-      min <- quantiles[2]
-    } else { # which.max(trgPrice) == 2
-      break
+      if(current == goal) break
+      open   <- append(open[open != current], children)
+      closed <- append(closed, current)
     }
+    
+    # assess best path
+    new.prod <- sapply(tree.leaves(plan.tree), function(x,s,a) { x$VAR })
+    node4max <- as.integer(names(which.max(new.prod)))
+    
+    # store plan
+    plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x,s,a) { x$PROD[a,s] }, sector, agent)
   }
-  # cat('\n')
   
-  prod[agent, sector] <- exp.prod
+  # update week to week of plan
+  week <- (week%%no.weeks) + no.weeks*(!week%%no.weeks)
+  
+  # setup planned production for next week
+  prod[agent, sector] <- plan[week + 1]
   return(prod)
-} # End function max.price.prod
+} # End planned.profit.prod
 
-# `agents<-` <- function(m,value,...) {
-#   args<-list(...)
-#   
-#   if(args$sector && is.numeric(args$sector)) {
-#     n.agents<-ceiling(nrow(m)/ncol(m))
-#     sector<-as.integer(args$sector)
-#     m[sector*1:n.agents,sector]<-value
-#   } else {
-#     m[,]<-value
-#   }
-#   return(m)
-# }
+
+
+# *****************************************************************
+# Agents per sector
 
 agents.in.sector <- function(sector, not. = FALSE, data = base) {
   if(!is.vector(sector) && !is.numeric(sector))
@@ -452,6 +468,10 @@ agents.in.sector <- function(sector, not. = FALSE, data = base) {
   }
 }
 
+# *****************************************************************
+# Fetch values per agent from dadosX matrices
+# Uses bitmask initialized from original production
+
 values.per.agent <- function(x, data=base, simplify=T) {
   if(!is.data.frame(x))
     stop('Invalid data type ',sQuote(x), ': expected data.frame, found ',class(x))
@@ -465,9 +485,4 @@ values.per.agent <- function(x, data=base, simplify=T) {
   if(simplify)
     return(i.val[data[[ASEC]]])
   return(i.val)
-}
-
-
-# Explorar estes conceitos
-# time-discount ???
-# time-preferences vs discount-rate
+} # End function values.per.agent

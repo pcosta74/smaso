@@ -1,21 +1,18 @@
-source('./properties.R')
-source('./setup.expanded.R')
-source('./micro.econ.expanded.R')
-source('./plot.expanded.R')
+source(file.path('.','properties.R'))
+source(file.path('.','setup.expanded.R'))
+source(file.path('.','micro.econ.expanded.R'))
+source(file.path('.','plot.expanded.R'))
 
 # simulation properties
 WEEKS <- 20
 SETUP <- '12x5'
 
 TESTS <- c(
-  #'ALTR.RTIO', 
-  #'DBLE.PROD', 
-  #'BLNC.MARK',
-  #'SAME.QNTT',
-  #'ALTR.PREF',
-  'MXMZ.WLTH',
-  'MXMZ.PRFT',
-  'MXMZ.PRIC',
+  #'ALTR.RTIO', 'DBLE.PROD', 'BLNC.MARK', 'SAME.QNTT', 'ALTR.PREF', ## BASE
+  #'MXMZ.WLTH',
+  #'MXMZ.PRFT',
+  #'MXMZ.PRIC',
+  'PLAN.PRFT',
   NULL
 )
 
@@ -143,4 +140,17 @@ if ('MXMZ.PRIC' %in% TESTS) {
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.price.prod`, sector=sector, agent=agents)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "maximize price", plot.files)  
+}
+
+# 9: Plan production to maximize profit
+if ('PLAN.PRFT' %in% TESTS) {
+  sector <- CLTH
+  agents <- agents.in.sector(sector)[1]
+  
+  create.alter.setup()
+  
+  bs <- Agent.micro.econ(base, WEEKS, verbose)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`planned.profit.prod`, sector=sector, agent=agents)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "planned profit", plot.files)  
 }
