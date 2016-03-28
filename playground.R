@@ -4,12 +4,14 @@ source(file.path('.','micro.econ.expanded.R'))
 source(file.path('.','plot.expanded.R'))
 
 # simulation properties
-WEEKS <- 8
+WEEKS <- 4
 SETUP <- '4x4'
 
 TESTS <- c(
   #'ALTR.RTIO', 'DBLE.PROD', 'BLNC.MARK', 'SAME.QNTT', 'ALTR.PREF', ## BASE
-  #'MXMZ.WLTH', 'MXMZ.PRFT', 'MXMZ.PRIC', 'MXMZ.WLTH.PREF.VAR', 'MXMZ.WLTH.REG.PRICES'
+  #'MXMZ.WLTH', 
+  'MXMZ.PRFT', 
+  #'#'MXMZ.PRIC', 'MXMZ.WLTH.PREF.VAR', 'MXMZ.WLTH.REG.PRICES'
   'PLAN.PRFT',
   NULL
 )
@@ -149,7 +151,7 @@ if ('PLAN.PRFT' %in% TESTS) {
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`planned.profit.prod`,
-                         sector=sector, agent=agents, prod.incr=0.10, periods=2)
+                         sector=sector, agent=agents, prod.incr=0.1, periods=2)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "planned profit", plot.files)  
 }

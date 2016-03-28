@@ -379,73 +379,41 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
   return(prod)
 } # End function max.FUN.prod
 
-#
-predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
-                          unit.cost, offset, it, week, sector, agent, 
-                          nagents, ngoods, price.limits, market.vals=F, ...) {
 
-  prod[agent, sector] <- q
-  cons.var[agent,]   <- q * unit.cost[agent,]
-  quant <- quant - (cons.fixed + cons.var) + prod
-  
-  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
-  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
-  
-  if(market.vals) 
-    return(append(new.values[[1]][sector], new.values))
-  return(new.values[[1]][sector])
-} # End function predict.price
 
-#
-predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
-                          unit.cost, offset, it, week, sector, agent, 
-                          nagents, ngoods, price.limits, market.vals=F, ...) {
+# Alter next week's production to maximize price
+planned.price.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
+                               unit.cost, offset, it, week, price.limits, ...) {
+  
+  environment(planned.FUN.prod) <- environment()
+  planned.FUN.prod(`predict.price`, ...)
+  
+} # End function planned.price.prod
 
-  prod[agent, sector] <- q
-  cons.var[agent,]   <- q * unit.cost[agent,]
-  quant <- quant - (cons.fixed + cons.var) + prod
+# Alter next week's production to maximize profit
+planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
+                                unit.cost, offset, it, week, price.limits, ...) {
   
-  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
-  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
+  environment(planned.FUN.prod) <- environment()
+  planned.FUN.prod(`predict.profit`, ...)
   
-  cons.total <- cons.var[agent, ] + cons.fixed[agent, ]
-  unit.cost  <- sum(cons.total * prices) / prod[agent, sector]
-  profit.margin <- new.values[[1]][sector] - 100 * unit.cost / new.values[[1]][sector] 
-  
-  if(market.vals) 
-    return(append(profit.margin,new.values))
-  return(profit.margin)
-} # End function predict.profit
+} # End function planned.profit.prod
 
-#
-predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
-                           unit.cost, offset, it, week, sector, agent, 
-                           nagents, ngoods, price.limits, market.vals=F, ...) {
-
-  prod[agent, sector] <- q
-  cons.var[agent,]   <- q * unit.cost[agent,]
-  quant <- quant - (cons.fixed + cons.var) + prod
+# Alter next week's production to maximize wealth
+planned.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
+                                unit.cost, offset, it, week, price.limits, ...) {
   
-  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
-  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
-                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
-  new.wealth <- wealth(nagents,ngoods,offset, 
-                       new.values[[2]], new.values[[1]])
+  environment(planned.FUN.prod) <- environment()
+  planned.FUN.prod(`predict.wealth`, ...)
   
-  if(market.vals) 
-    return(append(new.wealth[agent],new.values))
-  return(new.wealth[agent])
-} # End function predict.wealth
+} # End function planned.wealth.prod
 
 
 # *****************************************************************
 # Plan production to maximize profit
 
-planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
-                                unit.cost, offset, it, week, price.limits, sector=AGRC, agent=1, 
-                                prod.incr=0.10, periods=10, ...) {
+planned.FUN.prod <- function(FUN, sector=AGRC, agent=1, 
+                             prod.incr=0.10, periods=10, ...) {
 
   #force integer numbers
   period.starts <- round(quantile(1:(WEEKS+1), probs=seq(0,1,1/periods)))
@@ -466,8 +434,8 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
 
     plan.tree <- tree.new(no.weeks+1, children)
     plan.tree[[1]] <- list(VAR=0, PROD=prod[agent, sector], QNTT=quant, 
-                           VCON=cons.var[, sector])
-    cat(paste('planning at week #', week, 'for the next',no.weeks,'weeks'))
+                           VCON=cons.var[agent,])
+    cat(paste('planning at week #', week, 'for the next',no.weeks,'weeks\n'))
     
     nagents <- nrow(prod)
     ngoods  <- ncol(prod)
@@ -482,18 +450,18 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
       children <- tree.node.children(plan.tree, current, index.=T)
 
       cur.quant <- plan.tree[[current]]$QNTT
-      cons.var[, sector]  <- plan.tree[[current]]$VCON
+      cons.var[agent,]  <- plan.tree[[current]]$VCON
       prod[agent, sector] <- plan.tree[[current]]$PROD
-      max.prod  <- max.production(1:nagents, cur.quant, cons.fixed, unit.cost)
+      max.prod <- max.production(1:nagents, cur.quant, cons.fixed, unit.cost)
     
       percentiles <- quantile(c(0,max.prod[agent,sector]), percent.probs)
       tree.node.children(plan.tree, current) <- sapply(percentiles, function(p) {
         # call profit prediction function
-        pred <- predict.profit(p, prod, cur.quant, prices, beta, cons.fixed, 
-                               cons.var, unit.cost, offset, it, week, sector, 
-                               agent, nagents, ngoods, price.limits, market.vals=T, ...)
+        pred <- FUN(p, prod, cur.quant, prices, beta, cons.fixed, 
+                    cons.var, unit.cost, offset, it, week, sector, 
+                    agent, nagents, ngoods, price.limits, market.vals=T, ...)
         return(list(list(VAR=pred[[1]], PROD=p, QNTT=pred[[3]], 
-                         VCON=p*unit.cost[,sector])))
+                         VCON=p*unit.cost[agent,])))
       })
       
       if(current == goal) break
@@ -517,6 +485,66 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
   return(prod)
 } # End planned.profit.prod
 
+
+#
+predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
+                          unit.cost, offset, it, week, sector, agent, 
+                          nagents, ngoods, price.limits, market.vals=F, ...) {
+  
+  prod[agent, sector] <- q
+  cons.var[agent,]   <- q * unit.cost[agent,]
+  quant <- quant - (cons.fixed + cons.var) + prod
+  
+  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
+  
+  if(market.vals) 
+    return(append(new.values[[1]][sector], new.values))
+  return(new.values[[1]][sector])
+} # End function predict.price
+
+#
+predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
+                          unit.cost, offset, it, week, sector, agent, 
+                          nagents, ngoods, price.limits, market.vals=F, ...) {
+  
+  prod[agent, sector] <- q
+  cons.var[agent,]    <- q * unit.cost[agent,]
+  quant <- quant - (cons.fixed + cons.var) + prod
+  
+  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
+  
+  cons.total <- cons.var[agent, ] + cons.fixed[agent, ]
+  mon.unit.cost <- sum(cons.total * prices) / prod[agent, sector]
+  profit.margin <- new.values[[1]][sector] - 100 * mon.unit.cost / new.values[[1]][sector] 
+  
+  if(market.vals) 
+    return(append(profit.margin,new.values))
+  return(profit.margin)
+} # End function predict.profit
+
+#
+predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
+                           unit.cost, offset, it, week, sector, agent, 
+                           nagents, ngoods, price.limits, market.vals=F, ...) {
+  
+  prod[agent, sector] <- q
+  cons.var[agent,]    <- q * unit.cost[agent,]
+  quant <- quant - (cons.fixed + cons.var) + prod
+  
+  # Get new values for prices ([[1]]) and adquired quantities ([[2]])
+  new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
+                       NULL, NULL, it, week+1,verbose=F,price.min.max=price.limits)
+  new.wealth <- wealth(nagents,ngoods,offset, 
+                       new.values[[2]], new.values[[1]])
+  
+  if(market.vals) 
+    return(append(new.wealth[agent],new.values))
+  return(new.wealth[agent])
+} # End function predict.wealth
 
 
 # *****************************************************************
