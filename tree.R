@@ -150,7 +150,7 @@ tree.path <- function(tree, from=1, to=length(tree), index.=F) {
     path <- c(path,step)
     if(from == to) {
       if(index.) return(path)
-      else return(tree[path])
+      else return(rev(tree[path]))
     }
     to <- tree.node.parent(tree, to, index.=T)
   }

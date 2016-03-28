@@ -410,11 +410,11 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
 
     # create plan
     children <- length(percent.probs)
-    # prev.val <- ifelse(is.null(plan), prod[agent,sector], plan[length(plan)]) ???
 
     plan.tree <- tree.new(no.weeks+1, children)
     plan.tree[[1]] <- list(VAR=0, PROD=prod, QNTT=quant, VCON=cons.var)
-
+    cat(paste('planning at week #', week, 'for the next',no.weeks,'weeks'))
+    
     nagents <- nrow(prod)
     ngoods  <- ncol(prod)
 
@@ -455,7 +455,8 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
     node4max <- as.integer(names(which.max(new.prod)))
     
     # store plan
-    plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x,s,a) { x$PROD[a,s] }, sector, agent)
+    plan <<- sapply(tree.path(plan.tree, 1, node4max), 
+                    function(x,s,a) { x$PROD[a,s] }, sector, agent)
   }
   
   # update week to week of plan
