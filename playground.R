@@ -150,7 +150,8 @@ if ('PLAN.PRFT' %in% TESTS) {
   create.alter.setup()
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
-  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`planned.profit.prod`, sector=sector, agent=agents)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`planned.profit.prod`,
+                         sector=sector, agent=agents, prod.incr=0.10, periods=10)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "planned profit", plot.files)  
 }

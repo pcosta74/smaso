@@ -3,6 +3,9 @@
 tree.new <- function(depth, children, value=NULL) {
   
   size <- tree.size(depth=depth, children=children)
+  if(size > .Machine$integer.max)
+    stop('depth x children exceeds integer maximum')
+  
   if(depth < 1 || children < 1)
     tree <- list()
   else if(is.null(value))

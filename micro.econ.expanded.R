@@ -330,7 +330,7 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1,...) {
 #
 predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
                           unit.cost, offset, it, week, sector, agent, 
-                          nagents, ngoods, ...) {
+                          nagents, ngoods, market.vals=F, ...) {
   
   prod[agent, sector] <- q
   cons.var[sector,]   <- q * unit.cost[sector,]
@@ -340,13 +340,15 @@ predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
   new.values <- market(nagents, ngoods, offset, quant, prices, beta, 
                        NULL, NULL, it, week+1,verbose=F)
   
+  if(market.vals) 
+    return(append(new.values[[1]][sector], new.values))
   return(new.values[[1]][sector])
 } # End function predict.price
 
 #
 predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
                           unit.cost, offset, it, week, sector, agent, 
-                          nagents, ngoods, ...) {
+                          nagents, ngoods, market.vals=F, ...) {
   
   prod[agent, sector] <- q
   cons.var[sector,]   <- q * unit.cost[sector,]
@@ -360,13 +362,15 @@ predict.profit <-function(q, prod, quant, prices, beta, cons.fixed, cons.var,
   unit.cost  <- sum(cons.total * prices) / prod[agent, sector]
   profit.margin <- new.values[[1]][sector] - 100 * unit.cost / new.values[[1]][sector] 
   
+  if(market.vals) 
+    return(append(profit.margin,new.values))
   return(profit.margin)
 } # End function predict.profit
 
 #
 predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
                            unit.cost, offset, it, week, sector, agent, 
-                           nagents, ngoods, ...) {
+                           nagents, ngoods, market.vals=F, ...) {
   
   prod[agent, sector] <- q
   cons.var[sector,]   <- q * unit.cost[sector,]
@@ -378,20 +382,22 @@ predict.wealth <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
   new.wealth <- wealth(nagents,ngoods,offset, 
                        new.values[[2]], new.values[[1]])
   
+  if(market.vals) 
+    return(append(new.wealth[agent],new.values))
   return(new.wealth[agent])
 } # End function predict.wealth
 
 
 # *****************************************************************
-# Plan productio to maximize profit
+# Plan production to maximize profit
 
 planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
                                 unit.cost, offset, it, week, sector=AGRC, agent=1, 
-                                prod.incr=0.10, periods=5,...) {
+                                prod.incr=0.10, periods=10,...) {
   
   #force integer numbers
   period.starts <- round(quantile(1:(WEEKS+1), probs=seq(0,1,1/periods)))
-  percentiles   <- quantile(0:100, probs=seq(0,1,prod.incr))
+  percent.probs <- seq(0,1,prod.incr)
   
   # Forget previous plans (if any)
   if(week == 1) plan <<- NULL
@@ -403,11 +409,14 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
   if(week %in% period.starts) {
 
     # create plan
-    children <- length(percentiles)
-    prev.val <- ifelse(is.null(plan), prod[agent,sector], plan[length(plan)]) 
+    children <- length(percent.probs)
+    # prev.val <- ifelse(is.null(plan), prod[agent,sector], plan[length(plan)]) ???
 
     plan.tree <- tree.new(no.weeks+1, children)
-    plan.tree[[1]] <- list(VAR=0, QNTT=quant, PROD=prod, VCON=cons.var)
+    plan.tree[[1]] <- list(VAR=0, PROD=prod, QNTT=quant, VCON=cons.var)
+
+    nagents <- nrow(prod)
+    ngoods  <- ncol(prod)
 
     # populate tree with predictions
     goal   <- tree.size(NULL, no.weeks, children)
@@ -419,9 +428,21 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
       current <- ifelse(TRUE, open[1], open[length(open)])
       children <- tree.node.children(plan.tree, current, index.=T)
 
-      consider.prods <- plan.tree[[current]]$PROD[agent,sector] * percentiles
-      tree.node.children(plan.tree, current) <- sapply(consider.prods, function(p) {
-        list(plan.tree[[1]]) # TBD 
+      cur.cons.var <- plan.tree[[current]]$VCON
+      cur.quant <- plan.tree[[current]]$QNTT
+      cur.prod  <- plan.tree[[current]]$PROD
+      max.prod  <- max.production(1:nagents, cur.quant, cons.fixed, unit.cost)
+    
+      percentiles <- quantile(c(0,max.prod[agent,sector]), percent.probs)
+      tree.node.children(plan.tree, current) <- sapply(percentiles, function(p) {
+        # call profit prediction function
+        pred <- predict.profit(p, cur.prod, cur.quant, prices, beta, cons.fixed, 
+                               cur.cons.var, unit.cost, offset, it, week, sector, 
+                               agent, nagents, ngoods, market.vals=T, ...)
+  
+        cur.prod[agent, sector] <- p
+        cur.cons.var[sector,]   <- p * unit.cost[sector,]
+        return(list(list(VAR=pred[[1]], PROD=cur.prod, QNTT=pred[[3]], VCON=cur.cons.var)))
       })
       
       if(current == goal) break
