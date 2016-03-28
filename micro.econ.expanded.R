@@ -490,7 +490,7 @@ planned.profit.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
         # call profit prediction function
         pred <- predict.profit(p, cur.prod, cur.quant, prices, beta, cons.fixed, 
                                cur.cons.var, unit.cost, offset, it, week, sector, 
-                               agent, nagents, ngoods, market.vals=T, ...)
+                               agent, nagents, ngoods, price.limits, market.vals=T, ...)
   
         cur.prod[agent, sector] <- p
         cur.cons.var[sector,]   <- p * unit.cost[sector,]
