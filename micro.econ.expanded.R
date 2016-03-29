@@ -1,6 +1,5 @@
 source(file.path('.','tree.R'))
 
-
 Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, 
                              BETA.VAR = `base.beta`, PRICE.FACTOR = c(-Inf,Inf), ...) {
   
@@ -61,7 +60,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
   # Initial utility values
   hist.utility <- t.hist.per.agent
   hist.utility[1,1:nagents] <- utility(quant, beta)
-  
+
   ### Iterate for weeks
   for (week in 1:weeks) {
     if(verbose) {
@@ -111,7 +110,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
     #  print(round(wealth,1))
     
   } # end iterate weeks
-  
+
   if(verbose) {
     cat("Evolution of quantities","\n")
     print(hist.quant)
@@ -429,11 +428,10 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
   if(week %in% period.starts) {
     
     # create plan
-
     children <- length(percent.probs)
 
     plan.tree <- tree.new(no.weeks+1, children)
-    plan.tree[[1]] <- list(VAR=0, PROD=prod[agent, sector], QNTT=quant, 
+    plan.tree[[1]] <- list(VAR=0, CSUM=0, PROD=prod[agent, sector], QNTT=quant, 
                            VCON=cons.var[agent,])
     cat(paste('planning at week #', week, 'for the next',no.weeks,'weeks\n'))
     
@@ -443,25 +441,26 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     goal   <- tree.size(NULL, no.weeks, children)
     open   <- c(1)
     closed <- c()
-    
+
     while(length(open)) {
       # BREADTH-FIRST vs DEPTH-FIRST
       current <- ifelse(TRUE, open[1], open[length(open)])
       children <- tree.node.children(plan.tree, current, index.=T)
 
-      cur.quant <- plan.tree[[current]]$QNTT
-      cons.var[agent,]  <- plan.tree[[current]]$VCON
+      cur.quant  <- plan.tree[[current]]$QNTT
+      cur.cumsum <- plan.tree[[current]]$CSUM
+      cons.var[agent,]    <- plan.tree[[current]]$VCON
       prod[agent, sector] <- plan.tree[[current]]$PROD
       max.prod <- max.production(1:nagents, cur.quant, cons.fixed, unit.cost)
-    
+
       percentiles <- quantile(c(0,max.prod[agent,sector]), percent.probs)
       tree.node.children(plan.tree, current) <- sapply(percentiles, function(p) {
         # call profit prediction function
         pred <- FUN(p, prod, cur.quant, prices, beta, cons.fixed, 
                     cons.var, unit.cost, offset, it, week, sector, 
                     agent, nagents, ngoods, price.limits, market.vals=T, ...)
-        return(list(list(VAR=pred[[1]], PROD=p, QNTT=pred[[3]], 
-                         VCON=p*unit.cost[agent,])))
+        return(list(list(VAR=pred[[1]], CSUM=cur.cumsum+pred[[1]], 
+                         PROD=p, QNTT=pred[[3]], VCON=p*unit.cost[agent,])))
       })
       
       if(current == goal) break
@@ -470,11 +469,15 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     }
     
     # assess best path
-    new.prod <- sapply(tree.leaves(plan.tree), function(x) { x$VAR })
-    node4max <- as.integer(names(which.max(new.prod)))
+    # new.vals <- sapply(tree.leaves(plan.tree), function(x) { x$VAR })
+    new.vals <- sapply(tree.leaves(plan.tree), function(x) { x$CSUM })
+    node4max <- as.integer(names(which.max(new.vals)))
+    
+    print(plan.tree)
+    print(tree.path(plan.tree, 1, node4max, index. = T))
     
     # store plan
-    plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x,s,a) { x$PROD })
+    plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x) { x$PROD })
   }
   
   # update week to week of plan

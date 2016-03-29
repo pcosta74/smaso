@@ -147,10 +147,10 @@ tree.path <- function(tree, from=1, to=length(tree), index.=F) {
   # use backwards search for simplicity
   for(level in attr(tree,'depth'):1) {
     step <- to
-    path <- c(path,step)
+    path <- c(step,path)
     if(from == to) {
       if(index.) return(path)
-      else return(rev(tree[path]))
+      else return(tree[path])
     }
     to <- tree.node.parent(tree, to, index.=T)
   }

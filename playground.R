@@ -4,7 +4,7 @@ source(file.path('.','micro.econ.expanded.R'))
 source(file.path('.','plot.expanded.R'))
 
 # simulation properties
-WEEKS <- 4
+WEEKS <- 16
 SETUP <- '4x4'
 
 TESTS <- c(
@@ -15,6 +15,8 @@ TESTS <- c(
   'PLAN.PRFT',
   NULL
 )
+
+
 
 # Create base setup
 create.base.setup(SETUP)
@@ -151,7 +153,7 @@ if ('PLAN.PRFT' %in% TESTS) {
   
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`planned.profit.prod`,
-                         sector=sector, agent=agents, prod.incr=0.1, periods=2)
+                         sector=sector, agent=agents, prod.incr=0.1, periods=4)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "planned profit", plot.files)  
 }
