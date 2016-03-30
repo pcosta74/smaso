@@ -34,7 +34,7 @@ create.base.setup <- function(x) {
     assign(as.character(VARIABLES[s]), as.integer(VARIABLES[s]), pos = '.GlobalEnv')
   
   # Extend base scenario
-  base[[UCST]] <<- base[[VCON]]/apply(base[[PROD]], 1, max)
+  base[[UCST]] <<- base[[VCON]] / apply(base[[PROD]], 1, max)
   base[[ASEC]] <<- base[[PROD]] > 0
   
   # Change names for labels
@@ -82,4 +82,5 @@ create.alter.setup <- function(quant.delta = 1, pref.delta = 1, prod.delta = 1, 
     alter[[BETA]] <<- base[[BETA]] * pref.delta
     alter[[VCON]] <<- base[[VCON]] * vcons.delta
     alter[[PROD]] <<- base[[PROD]] * prod.delta
+    alter[[UCST]] <<- alter[[VCON]] / apply(alter[[PROD]], 1, max)
 }

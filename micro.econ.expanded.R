@@ -250,7 +250,7 @@ utility <- function(quant, beta) {
 max.production <- function(agent, quant, cons.fixed, unit.cost) {
   prod    <- (quant[agent,] - cons.fixed[agent,]) / unit.cost[agent,]
   prod[,] <- apply(prod, 1, function(p) max(0, min(p)))
-  values.per.agent(prod, simplify = F)
+  values.per.agent(prod, simplify = F)[agent,]
 } # End function max.production
 
 # *****************************************************************
@@ -437,11 +437,14 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     
     nagents <- nrow(prod)
     ngoods  <- ncol(prod)
+    
     # populate tree with predictions
     goal   <- tree.size(NULL, no.weeks, children)
     open   <- c(1)
     closed <- c()
 
+    bar <- txtProgressBar(min=1,max=goal,initial=1,char='|',style=3,width=20)
+    
     while(length(open)) {
       # BREADTH-FIRST vs DEPTH-FIRST
       current <- ifelse(TRUE, open[1], open[length(open)])
@@ -455,7 +458,6 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
 
       percentiles <- quantile(c(0,max.prod[agent,sector]), percent.probs)
       tree.node.children(plan.tree, current) <- sapply(percentiles, function(p) {
-        # call profit prediction function
         pred <- FUN(p, prod, cur.quant, prices, beta, cons.fixed, 
                     cons.var, unit.cost, offset, it, week, sector, 
                     agent, nagents, ngoods, price.limits, market.vals=T, ...)
@@ -463,7 +465,9 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
                          PROD=p, QNTT=pred[[3]], VCON=p*unit.cost[agent,])))
       })
       
+      setTxtProgressBar(bar, current)
       if(current == goal) break
+      
       open   <- append(open[open != current], children)
       closed <- append(closed, current)
     }
