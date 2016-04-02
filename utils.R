@@ -2,8 +2,9 @@ camel.case<-function(x=as.character()) {
   gsub('(\\w)(\\w*)', '\\U\\1\\L\\2', as.character(x), perl=TRUE)
 }
 
-enum <- function(x=c()) {
-  c<-match.call()
+enum <- function(...) {
+  c <- match.call()
+  x <- unlist(list(...))
   tryCatch({
     e <- ordered(1:length(as.vector(x)), labels=as.vector(x))
     class(e)<-c(class(e),'enum')

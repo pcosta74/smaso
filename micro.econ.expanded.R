@@ -250,7 +250,7 @@ utility <- function(quant, beta) {
 max.production <- function(agent, quant, cons.fixed, unit.cost) {
   prod    <- (quant[agent,] - cons.fixed[agent,]) / unit.cost[agent,]
   prod[,] <- apply(prod, 1, function(p) max(0, min(p)))
-  values.per.agent(prod, simplify = F)[agent,]
+  values.per.agent(prod, agent, simplify = F)
 } # End function max.production
 
 # *****************************************************************
@@ -579,17 +579,17 @@ agents.in.sector <- function(sector, not. = FALSE, data = base) {
 # Fetch values per agent from dadosX matrices
 # Uses bitmask initialized from original production
 
-values.per.agent <- function(x, data=base, simplify=T) {
+values.per.agent <- function(x, agent=1:nrow(x), data=base, simplify=T) {
   if(!is.data.frame(x))
     stop('Invalid data type ',sQuote(x), ': expected data.frame, found ',class(x))
   
-  if(!identical(dim(x), dim(data[[ASEC]])))
+  if(!identical(dim(x), dim(data$ASEC[agent,])))
     stop('Invalid size: ',sQuote(x), 
-         ': expected ', dim(data[[ASEC]]), ', found ', dim(x))
+         ': expected ', dim(data$ASEC[agent,]), ', found ', dim(x))
   
-  i.val <- as.matrix(x * (data[[ASEC]]>0))
+  i.val <- as.matrix(x * (data$ASEC[agent,]>0))
   
   if(simplify)
-    return(i.val[data[[ASEC]]])
-  return(i.val)
+    return(i.val[as.matrix(data[[ASEC]][agent,])])
+  return(i.val[agent,])
 } # End function values.per.agent

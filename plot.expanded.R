@@ -2,7 +2,7 @@ source(file.path('.','properties.R'))
 source(file.path('.','enums.R'))
 
 # export file formats 
-PLOT.FILE.FORMATS <- enum(c('bmp','png','jpeg','tiff'))
+PLOT.FILE.FORMATS <- enum('bmp','png','jpeg','tiff')
 
 # plot base and alternative scenarios
 plot.scenarios <- function(weeks, bs.scen, as.scen, setup=NULL,
