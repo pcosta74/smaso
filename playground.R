@@ -4,15 +4,21 @@ source(file.path('.','micro.econ.expanded.R'))
 source(file.path('.','plot.expanded.R'))
 
 # simulation properties
+
 WEEKS <- 16
 SETUP <- '4x4'
 
 TESTS <- c(
-  #'ALTR.RTIO', 'DBLE.PROD', 'BLNC.MARK', 'SAME.QNTT', 'ALTR.PREF', ## BASE
+  #'ALTR.RTIO', 
+  #'DBLE.PROD', 
+  #'BLNC.MARK', 
+  #'SAME.QNTT', 
+  #'ALTR.PREF', ## BASE
   #'MXMZ.WLTH', 
-  'MXMZ.PRFT', 
+  #'MXMZ.PRFT', 
   #'#'MXMZ.PRIC', 'MXMZ.WLTH.PREF.VAR', 'MXMZ.WLTH.REG.PRICES'
-  'PLAN.PRFT',
+  #'PLAN.PRFT',
+  'MXMZ.WLTH.MULTI.PROD',
   NULL
 )
 
@@ -51,10 +57,13 @@ if ('DBLE.PROD' %in% TESTS) {
   sector <- CLTH
   agents <- agents.in.sector(sector)
   
-  p.mtx <- matrix(1,dim[1],dim[2])
-  p.mtx[agents, sector] <- 1.5
+  #p.mtx <- matrix(1,dim[1],dim[2])
+  #p.mtx[agents, sector] <- 1.5
   
-  create.alter.setup(prod.delta = p.mtx)
+  v.mtx <- matrix(1,dim[1],dim[2])  #TORNAR O CUSTO METADE, EM VEZ DE DUPLICAR A PRODUÇÃO
+  v.mtx[agents,] <- 0.5             
+  
+  create.alter.setup(vcons.delta = v.mtx)
   bs <- Agent.micro.econ(base, WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose)
   
@@ -185,4 +194,24 @@ if ('MXMZ.WLTH.REG.PRICES' %in% TESTS) {
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`max.wealth.prod`, PRICE.FACTOR = c(0.25,4), sector=sector, agent=agents)
   
   plot.scenarios(WEEKS, bs, as, SETUP, "regulated prices", plot.files)  
+}
+
+# 12: Maximize wealth with Multiple Production
+if ('MXMZ.WLTH.MULTI.PROD' %in% TESTS) {
+  sector <- CLTH #CLTH #AGRC #TRNS #FUEL #HLTH #MNY
+  agents <- agents.in.sector(sector)[1] 
+  
+  if (SETUP == "4x4") {
+    multi.sectors<- c(AGRC, CLTH, TRNS, FUEL) #the sectors where to search for production allocation  
+  } else {
+    multi.sectors<- c(AGRC, CLTH, HLTH, TRNS) #the sectors where to search for production allocation
+  }
+  
+  create.alter.setup()
+  
+  #compares base scenario with multiple production ability
+  bs <- Agent.micro.econ(alter,WEEKS, verbose)
+  as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`multi.max.wealth.prod`, sector=sector, agent=agents, multi.sectors = multi.sectors)
+  
+  plot.scenarios(WEEKS, bs, as, SETUP, "multi product", plot.files)  
 }

@@ -78,6 +78,7 @@ create.alter.setup <- function(quant.delta = 1, pref.delta = 1, prod.delta = 1, 
 
     # Alternative setup
     alter <<- base
+
     alter[[QNTT]] <<- base[[QNTT]] * quant.delta 
     alter[[BETA]] <<- base[[BETA]] * pref.delta
     alter[[VCON]] <<- base[[VCON]] * vcons.delta
