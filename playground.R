@@ -5,7 +5,7 @@ source(file.path('.','plot.expanded.R'))
 
 # simulation properties
 
-WEEKS <- 16
+WEEKS <- 4
 SETUP <- '4x4'
 
 TESTS <- c(
@@ -198,20 +198,19 @@ if ('MXMZ.WLTH.REG.PRICES' %in% TESTS) {
 
 # 12: Maximize wealth with Multiple Production
 if ('MXMZ.WLTH.MULTI.PROD' %in% TESTS) {
-  sector <- CLTH #CLTH #AGRC #TRNS #FUEL #HLTH #MNY
+  sector <- AGRC #TRNS #FUEL #HLTH #MNY
   agents <- agents.in.sector(sector)[1] 
-  
-  if (SETUP == "4x4") {
-    multi.sectors<- c(AGRC, CLTH, TRNS, FUEL) #the sectors where to search for production allocation  
-  } else {
-    multi.sectors<- c(AGRC, CLTH, HLTH, TRNS) #the sectors where to search for production allocation
-  }
+  multi.sectors <- as.integer(SECTORS)
   
   create.alter.setup()
   
-  #compares base scenario with multiple production ability
+  # compares base scenario with multiple production ability
   bs <- Agent.micro.econ(alter,WEEKS, verbose)
   as <- Agent.micro.econ(alter,WEEKS, verbose, PROD.FUN=`multi.max.wealth.prod`, sector=sector, agent=agents, multi.sectors = multi.sectors)
   
-  plot.scenarios(WEEKS, bs, as, SETUP, "multi product", plot.files)  
+  plot.scenarios(WEEKS, bs, as, SETUP, "multi product", plot.files)
+  
+  # get multi-prodction into the right place for plotting
+  as[[2]] <- as[[6]]
+  plot.vars(WEEKS, as, as, 'production', "multi product", ylab='units')
 }

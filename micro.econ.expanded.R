@@ -3,6 +3,8 @@ source(file.path('.','tree.R'))
 Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`, 
                              BETA.VAR = `base.beta`, PRICE.FACTOR = c(-Inf,Inf), ...) {
   
+  mult.prod <- 'multi.sectors' %in% names(list(...))
+  
   # *************************************************************
   # Read-in data
   
@@ -30,15 +32,11 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
   # Price Mínimum and Maximum
   price.limits <- list(PRICE.FACTOR[1] * prices,PRICE.FACTOR[2] * prices)  
   
-  #browser()
   # Consumption of products to produce 1 unit (by sector, not by agent)
-  prod.agents <- rep(0,4) #são sempre 4 bens, o MNY não conta
-  for (i in 1:4) {
-    prod.agents[i]<-agents.in.sector(i)[1]
-  }
+  prod.agents <-agents.in.sector(1:4)$agent #são sempre 4 bens, o MNY não conta
   cons.unit.sector <- t(sapply(prod.agents, function(x) unlist(cons.var[x,]/max(prod[x,]))))
   if (ngoods > 4) {
-    cons.unit.sector <- rbind(cons.unit.sector,0)
+    cons.unit.sector <- rbind(cons.unit.sector, 0)
   }
   
   # historic per agent (TEMPLATE)
@@ -53,6 +51,12 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
   # Initial production
   hist.prod <- t.hist.per.agent
   hist.prod[1,1:nagents] <- values.per.agent(prod)
+  
+  
+  if(mult.prod) {
+    hist.mult.prod <- hist
+    hist.mult.prod[1:length(agents),1:ngoods] <-  prod[agents,]
+  }
   
   # Initial prices
   hist.prices <- hist
@@ -110,9 +114,11 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
     cons.var <- t(sapply(1:nagents, function (x) colSums(t(prod)[,x]*cons.unit.sector)))
 #   cons.var  <- apply(prod, 1, max) * unit.cost
 
-#   browser()
-    
     hist.prod <- rbind(hist.prod, values.per.agent(prod))
+    
+    if(mult.prod) {
+      hist.mult.prod <- rbind(hist.mult.prod, prod[agents,])
+    }
     
     quant <- quant - (cons.fixed + cons.var) + prod
     hist.quant <- rbind(hist.quant, values.per.agent(quant))
@@ -144,7 +150,12 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
     print(hist.utility)
   }
   
-  return(list(hist.quant, hist.prod, hist.prices, hist.wealth, hist.utility))
+  result <- list(hist.quant, hist.prod, hist.prices, hist.wealth, hist.utility)
+  
+  if(mult.prod)
+    result <- append(result, list(hist.mult.prod))
+  
+  return(result)
 } # end function Agent.micro.econ
 
 
@@ -421,7 +432,7 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
   initial.info <-get.best.from.possib.mat(possib.matrices, FUN, prod, quant, prices, beta, cons.fixed, cons.var,
                               unit.cost, offset, it, week, sector, agent, 
                               nagents, ngoods, price.limits, cons.unit.sector)
-  print(initial.info)
+  #print(initial.info)
   possib.matrices <- list()  
   for(iteration in 1:it) {
     cat('.')
@@ -445,11 +456,11 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
     }
     possib.matrices[[1]] <- list(comb, multi.prod.mat(maxim[comb[1]], minim[comb[1]], maxim[comb[2]], minim[comb[2]],
                                                    cons.unit.sector, quant, cons.fixed, agent, comb))
-    print(possib.matrices)
+    #print(possib.matrices)
     initial.info <- get.best.from.possib.mat(possib.matrices, FUN, prod, quant, prices, beta, cons.fixed, cons.var,
                                             unit.cost, offset, it, week, sector, agent, 
                                             nagents, ngoods, price.limits, cons.unit.sector)    
-    print(initial.info)
+    #print(initial.info)
   }
   
   cat('\n')

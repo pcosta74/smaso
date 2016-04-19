@@ -34,9 +34,8 @@ plot.scenarios <- function(weeks, bs.scen, as.scen, setup=NULL,
   }
 
 # plot variables in scenario
-plot.vars <- 
-  function(weeks, bs.scen, as.scen, indicator, 
-           description='', xlab='weeks', ylab='units') {
+plot.vars <- function(weeks, bs.scen, as.scen, indicator, 
+                      description='', xlab='weeks', ylab='units') {
   
   # validar indicator
   index <- match.enum(indicator,INDICATORS)
