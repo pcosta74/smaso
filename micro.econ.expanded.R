@@ -340,6 +340,8 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
   min <- 0
   max <- max(0, max.prod[agent, sector])
   
+  df <- data.frame()
+  
   for(iteration in 1:it) {
     # cat('.')
     quantiles <- quantile(c(min, max), probs=c(.25, .5, .75))
@@ -347,6 +349,8 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
                         prod, quant, prices, beta, cons.fixed, cons.var,
                         unit.cost, offset, it, week, sector, agent, 
                         nagents, ngoods, price.limits, ...)
+  
+    df <- rbind(df,c(week,trgValues,min,max,quantiles))
     
     exp.prod <- quantiles[2]
     if (round(min,3) == round(max,3)) {
@@ -356,11 +360,17 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
     } else if (which.max(trgValues) == 3) {
       min <- quantiles[2]
     } else { # which.max(trgValues) == 2
-      break
+      min <- quantiles[1]
+      max <- quantiles[3]
     }
   }
   # cat('\n')
-  
+  colnames(df) <- c('week','tv1', 'tv2', 'tv3','min','max','p25', 'p50', 'p75')
+  filepath <- file.path('.',paste(deparse(substitute(FUN)),'csv',sep='.'))
+  write.table(x=df, file=filepath, sep = ',',
+              append=file.exists(filepath),
+              row.names = F, col.names=!file.exists(filepath))
+
   prod[agent, sector] <- exp.prod
   return(prod)
 } # End function max.FUN.prod

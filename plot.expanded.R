@@ -56,13 +56,19 @@ plot.vars <- function(weeks, bs.scen, as.scen, indicator,
   
   par(mai=rep(0,4))
   plot.new()
+  
+  scen.lbls <- c("base")
+  if(!is.null(as.scen))
+    scen.lbls <- c(scen.lbls,description)
+  
   legend(x='center', horiz = TRUE, bty='n',
          title = expression(bold('Scenarios')), 
-         camel.case(c("base", description)),
+         camel.case(scen.lbls),
          lty=1, lwd=PLOT.LWD, cex = 0.8,
          col=c(PLOT.COL.BASE, PLOT.COL.ALTER),
          inset=rep(1.1,4)
   )
+
 
   for (column in 1:limit) {
     par(mai=rep(0.35,4))
@@ -83,10 +89,12 @@ plot.vars <- function(weeks, bs.scen, as.scen, indicator,
          lwd = PLOT.LWD,
          col = PLOT.COL.BASE)
     #desenhar cenario alternativo
-    lines(as.scen[[index]][,column], 
-          type = "l",
-          lwd = PLOT.LWD,
-          col = PLOT.COL.ALTER)
+    if(!is.null(as.scen)) {
+      lines(as.scen[[index]][,column], 
+            type = "l",
+            lwd = PLOT.LWD,
+            col = PLOT.COL.ALTER)
+    }
     
     #titulos
     title(main=colnames(bs.scen[[index]][column]),line=0.7)
