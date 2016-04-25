@@ -408,7 +408,7 @@ planned.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
 # Plan production to maximize profit
 
 planned.FUN.prod <- function(FUN, sector=AGRC, agent=1, 
-                             prod.incr=0.10, periods=10, TRAV.FUN=`depth.first`, ...) {
+                             prod.incr=0.10, periods=10, ...) {
 
   #force integer numbers
   period.starts <- round(quantile(1:(WEEKS+1), probs=seq(0,1,1/periods)))
@@ -442,7 +442,7 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     bar <- txtProgressBar(min=1,max=goal,initial=1,char='|',style=3,width=20)
     
     while(length(open)) {
-      current  <- TRAV.FUN(open) # BREADTH-FIRST vs DEPTH-FIRST
+      current  <- open[1] # traverse tree breadth first
       children <- tree.node.children(plan.tree, current, index.=T)
 
       cur.quant  <- plan.tree[[current]]$QNTT
@@ -474,7 +474,10 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     node4max <- as.integer(names(which.max(new.vals)))
     
     # print(plan.tree)
-    # print(tree.path(plan.tree, 1, node4max, index. = T))
+    #sapply(tree.leaves(plan.tree,index. = T), function(l) {
+    #  print(tree.path(plan.tree, 1, l, index. = T))
+    #})
+    print(tree.path(plan.tree, 1, node4max, index. = T))
     
     # store plan
     plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x) { x$PROD })
@@ -488,16 +491,6 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
   return(prod)
 } # End planned.FUN.prod
 
-
-# Traverse tree breadth first
-breadth.first <- function(open) {
-  return(open[1])
-}
-
-# Traverse tree deptj first
-depth.first <- function(open) {
-  return(open[length(open)])
-}
 
 #
 predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
