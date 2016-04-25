@@ -3,8 +3,9 @@
 #
 
 # plot properties
-PLOT.COL.BASE <- 4
-PLOT.COL.ALTER <- 2
+PLOT.COL.BASE   <- "blue"
+PLOT.COL.ALTER  <- "red"
+PLOT.COL.ALTER2 <- "green"
 PLOT.LWD <- 2
 
 # image export properties
