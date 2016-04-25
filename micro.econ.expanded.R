@@ -491,7 +491,7 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
 
 # Traverse tree breadth first
 breadth.first <- function(open) {
-  return(open[length(open)])
+  return(open[1])
 }
 
 # Traverse tree deptj first
