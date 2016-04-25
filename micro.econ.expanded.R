@@ -408,7 +408,7 @@ planned.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var,
 # Plan production to maximize profit
 
 planned.FUN.prod <- function(FUN, sector=AGRC, agent=1, 
-                             prod.incr=0.10, periods=10, ...) {
+                             prod.incr=0.10, periods=10, TRAV.FUN=`depth.first`, ...) {
 
   #force integer numbers
   period.starts <- round(quantile(1:(WEEKS+1), probs=seq(0,1,1/periods)))
@@ -442,8 +442,7 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     bar <- txtProgressBar(min=1,max=goal,initial=1,char='|',style=3,width=20)
     
     while(length(open)) {
-      # BREADTH-FIRST vs DEPTH-FIRST
-      current <- ifelse(TRUE, open[1], open[length(open)])
+      current  <- TRAV.FUN(open) # BREADTH-FIRST vs DEPTH-FIRST
       children <- tree.node.children(plan.tree, current, index.=T)
 
       cur.quant  <- plan.tree[[current]]$QNTT
@@ -463,8 +462,8 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
       })
       
       setTxtProgressBar(bar, current)
-      if(current == goal) break
       
+      if(current == goal) break
       open   <- append(open[open != current], children)
       closed <- append(closed, current)
     }
@@ -474,8 +473,8 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     new.vals <- sapply(tree.leaves(plan.tree), function(x) { x$CSUM })
     node4max <- as.integer(names(which.max(new.vals)))
     
-    print(plan.tree)
-    print(tree.path(plan.tree, 1, node4max, index. = T))
+    # print(plan.tree)
+    # print(tree.path(plan.tree, 1, node4max, index. = T))
     
     # store plan
     plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x) { x$PROD })
@@ -487,8 +486,18 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
   # setup planned production for next week
   prod[agent, sector] <- plan[week + 1]
   return(prod)
-} # End planned.profit.prod
+} # End planned.FUN.prod
 
+
+# Traverse tree breadth first
+breadth.first <- function(open) {
+  return(open[length(open)])
+}
+
+# Traverse tree deptj first
+depth.first <- function(open) {
+  return(open[length(open)])
+}
 
 #
 predict.price <- function(q, prod, quant, prices, beta, cons.fixed, cons.var,
