@@ -632,15 +632,15 @@ values.per.agent <- function(x, agent=1:nrow(x), data=base, simplify=T) {
 #   M <- maximum preference (tipically = 1)
 #   f <- multiplicative factor (if price is growing, the new beta will be 0 when price = initial price*(1+f) ) We use 5 as base case
 #
-update.betas <- function(beta_inic, orig_prices, prices, f=5, M=1)  {
+update.betas <- function(beta_inic, orig_prices, prices, f=3, M=1)  {
   temp_prefs <- rep(0,4)
   max_prices <- orig_prices*(1+f)
   for (i in 1:length(orig_prices)) {
     P <- orig_prices[i]
     B <- beta_inic[1,i]
     x <- prices[i]
-    if (0<x && x<P) {
-      temp_prefs[i] <- (1/P)*((B-1) * sqrt(2*P*x - x^2) + M*P)
+    if (0<x && x<P) {  
+      temp_prefs[i] <- (1/P)*((B-1) * sqrt(2*P*x - x^2) + M*P) 
     } else if (P<=x && x<max_prices[i]){
       temp_prefs[i] <- (1/(f*P))*(B*sqrt((f^2)*(P^2)-(P^2)+2*P*x-x^2))
     } else {
@@ -715,10 +715,11 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
   combs.to.test <- combn(multi.sectors,2)
   possib.matrices <- list()
   for (comb in 1:dim(combs.to.test)[2]) { #For each combination of production, get matrix of possibilities
-    possib.matrices[[comb]] <- list(combs.to.test[,comb],
-                                    multi.prod.mat(maxim[combs.to.test[,comb]][1], minim[combs.to.test[,comb]][1],
-                                                   maxim[combs.to.test[,comb]][2], minim[combs.to.test[,comb]][2],
-                                                   cons.unit.sector, quant, cons.fixed, agent, combs.to.test[,comb]))  
+    ctt <- combs.to.test[,comb]
+    mpm <- multi.prod.mat(maxim[ctt][1], minim[ctt][1],
+                          maxim[ctt][2], minim[ctt][2],
+                          cons.unit.sector, quant, cons.fixed, agent, ctt)
+    possib.matrices[[comb]] <- list(ctt,mpm)  
   }
   
   print(possib.matrices)
@@ -733,9 +734,10 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
   #produções de cada produto = c(ProdA,ProdB) (valores de produção)
   #func objectivo = valor
   
-  initial.info <-get.best.from.possib.mat(possib.matrices, FUN, prod, quant, prices, beta, cons.fixed, cons.var,
-                                          unit.cost, offset, it, week, sector, agent, 
-                                          nagents, ngoods, price.limits, cons.unit.sector)
+  initial.info <- get.best.possib.mat(possib.matrices, FUN, prod, quant, prices, beta, 
+                                      cons.fixed, cons.var, unit.cost, offset, it, week,
+                                      sector, agent, nagents, ngoods, price.limits, 
+                                      cons.unit.sector)
   #print(initial.info)
   possib.matrices <- list()  
   for(iteration in 1:it) {
@@ -744,11 +746,14 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
     pos   <- initial.info[[2]]
     coord <- initial.info[[3]]
     val   <- initial.info[[4]]
-    if (pos[1] == 2 & pos[2] == 2) break
+    
+    if (pos[1] == 2 && pos[2] == 2) break
     #    browser()
+    
     if (length(possib.matrices) != 0) {
-      if(all(round(as.numeric(dimnames(possib.matrices[[1]][[2]])[[1]]),3)==round(as.numeric(dimnames(possib.matrices[[1]][[2]])[[1]][2]),3)) & 
-         all(round(as.numeric(dimnames(possib.matrices[[1]][[2]])[[2]]),3)==round(as.numeric(dimnames(possib.matrices[[1]][[2]])[[2]][2]),3))) break
+      dnames <- dimnames(possib.matrices[[1]][[2]])
+      if(all(round(as.numeric(dnames[[1]]),3)==round(as.numeric(dnames[[1]][2]),3)) && 
+         all(round(as.numeric(dnames[[2]]),3)==round(as.numeric(dnames[[2]][2]),3))) break
     }
     
     for (i in 1:2) {
@@ -758,12 +763,16 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
         minim[comb[i]]<-coord[i]
       }
     }
-    possib.matrices[[1]] <- list(comb, multi.prod.mat(maxim[comb[1]], minim[comb[1]], maxim[comb[2]], minim[comb[2]],
-                                                      cons.unit.sector, quant, cons.fixed, agent, comb))
+    mpm <- multi.prod.mat(maxim[comb[1]], minim[comb[1]], 
+                          maxim[comb[2]], minim[comb[2]],
+                          cons.unit.sector, quant, cons.fixed, agent, comb)
+    possib.matrices[[1]] <- list(comb, mpm)
+    
     #print(possib.matrices)
-    initial.info <- get.best.from.possib.mat(possib.matrices, FUN, prod, quant, prices, beta, cons.fixed, cons.var,
-                                             unit.cost, offset, it, week, sector, agent, 
-                                             nagents, ngoods, price.limits, cons.unit.sector)    
+    initial.info <- get.best.possib.mat(possib.matrices, FUN, prod, quant, prices, beta, 
+                                        cons.fixed, cons.var, unit.cost, offset, it, week,
+                                        sector, agent, nagents, ngoods, price.limits, 
+                                        cons.unit.sector)    
     #print(initial.info)
   }
   
@@ -776,10 +785,11 @@ multi.max.FUN.prod <- function(FUN, sector=AGRC, agent=1, multi.sectors = c(1,2)
 } # End function muti.max.FUN.prod
 
 # multi.prod.mat funtion returns matrix of possible combinations of producing 2 products 
-multi.prod.mat <- function(max.prod.row, min.prod.row, max.prod.col, min.prod.col, cons.unit.sector, quant, cons.fixed, agent=1, sectors = c(1,2)) {
+multi.prod.mat <- function(max.prod.row, min.prod.row, max.prod.col, min.prod.col, 
+                           cons.unit.sector, quant, cons.fixed, agent=1, sectors = c(1,2)) {
   a <- matrix(rep(0,9),3,3)
-  rownames(a)<-quantile(c(min.prod.row, max.prod.row),probs = c(.25, .5, .75))
-  colnames(a)<-quantile(c(min.prod.col, max.prod.col),probs = c(.25, .5, .75))
+  rownames(a) <- quantile(c(min.prod.row, max.prod.row),probs = c(.25, .5, .75))
+  colnames(a) <- quantile(c(min.prod.col, max.prod.col),probs = c(.25, .5, .75))
   
   production <- rep(0,dim(quant)[2])
   
@@ -793,9 +803,9 @@ multi.prod.mat <- function(max.prod.row, min.prod.row, max.prod.col, min.prod.co
   return(a)
 }
 
-get.best.from.possib.mat <- function(mat.list, FUN, prod, quant, prices, beta, cons.fixed, cons.var,
-                                     unit.cost, offset, it, week, sector, agent, 
-                                     nagents, ngoods, price.limits, cons.unit.sector, ...) {
+get.best.possib.mat <- function(mat.list, FUN, prod, quant, prices, beta, cons.fixed, 
+                                cons.var, unit.cost, offset, it, week, sector, agent, 
+                                nagents, ngoods, price.limits, cons.unit.sector, ...) {
   #input list of possibility matrices
   #output vector with best combination, given the maximizing FUN (comb de produtos; posição na matriz; produções de cada produto; valor da func objetivo)
   
