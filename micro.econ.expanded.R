@@ -214,9 +214,9 @@ market <- function(nagents, ngoods, offset, quant, prices, beta,
       tot.ex.demand[good]<-sum(ex.demand[,good])  
       
       # Adjust the prices 
-      prices[good]<-max(price.min.max[[1]][good],
-                        min(prices[good]*(1+tot.ex.demand[good]/(2* sum(quant[,good]))),
-                            price.min.max[[2]][good]))      
+      prices[good] <- prices[good]*(1+tot.ex.demand[good]/(2* sum(quant[,good])))
+      prices[good] <- max(price.min.max[[1]][good],
+                        min(prices[good], price.min.max[[2]][good]))      
     } # For each good
     
     # Communicate the values of excess demand
@@ -340,7 +340,7 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
   min <- 0
   max <- max(0, max.prod[agent, sector])
   
-  df <- data.frame()
+  #df <- data.frame()
   
   for(iteration in 1:it) {
     # cat('.')
@@ -350,7 +350,7 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
                         unit.cost, offset, it, week, sector, agent, 
                         nagents, ngoods, price.limits, ...)
   
-    df <- rbind(df,c(week,trgValues,min,max,quantiles))
+    #df <- rbind(df,c(week,trgValues,min,max,quantiles))
     
     exp.prod <- quantiles[2]
     if (round(min,3) == round(max,3)) {
@@ -365,11 +365,10 @@ max.FUN.prod <- function(FUN, sector=AGRC, agent=1, ...) {
     }
   }
   # cat('\n')
-  colnames(df) <- c('week','tv1', 'tv2', 'tv3','min','max','p25', 'p50', 'p75')
-  filepath <- file.path('.',paste(deparse(substitute(FUN)),'csv',sep='.'))
-  write.table(x=df, file=filepath, sep = ',',
-              append=file.exists(filepath),
-              row.names = F, col.names=!file.exists(filepath))
+  #colnames(df) <- c('week','tv1', 'tv2', 'tv3','min','max','p25', 'p50', 'p75')
+  #filepath <- file.path('.',paste(deparse(substitute(FUN)),'csv',sep='.'))
+  #write.table(x=df, file=filepath, sep = ',', append=file.exists(filepath),
+  #            row.names = F, col.names=!file.exists(filepath))
 
   prod[agent, sector] <- exp.prod
   return(prod)
@@ -426,8 +425,16 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     # create plan
     children <- length(percent.probs)
 
+    if(week == 1) {
+      var  <- 0
+      csum <- 0
+    } else {
+      var  <- plan['VAR',  ncol(plan)]
+      csum <- plan['CSUM', ncol(plan)]
+    }
+    
     plan.tree <- tree.new(no.weeks+1, children)
-    plan.tree[[1]] <- list(VAR=0, CSUM=0, PROD=prod[agent, sector], QNTT=quant, 
+    plan.tree[[1]] <- list(VAR=var, CSUM=csum, PROD=prod[agent, sector], QNTT=quant, 
                            VCON=cons.var[agent,])
     cat(paste('planning at week #', week, 'for the next',no.weeks,'weeks\n'))
     
@@ -439,7 +446,8 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     open   <- c(1)
     closed <- c()
 
-    bar <- txtProgressBar(min=1,max=goal,initial=1,char='|',style=3,width=20)
+    if(goal!=1)
+      bar <- txtProgressBar(min=1,max=goal,initial=1,char='|',style=3,width=20)
     
     while(length(open)) {
       current  <- open[1] # traverse tree breadth first
@@ -461,7 +469,8 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
                          PROD=p, QNTT=pred[[3]], VCON=p*unit.cost[agent,])))
       })
       
-      setTxtProgressBar(bar, current)
+      if(exists('bar'))
+        setTxtProgressBar(bar, current)
       
       if(current == goal) break
       open   <- append(open[open != current], children)
@@ -474,20 +483,33 @@ planned.FUN.prod <- function(FUN, sector=AGRC, agent=1,
     node4max <- as.integer(names(which.max(new.vals)))
     
     # print(plan.tree)
-    #sapply(tree.leaves(plan.tree,index. = T), function(l) {
-    #  print(tree.path(plan.tree, 1, l, index. = T))
-    #})
-    print(tree.path(plan.tree, 1, node4max, index. = T))
+    df <- data.frame()
+    for( l in tree.leaves(plan.tree,index. = T)) {
+      lineA <- tree.path(plan.tree, 1, l, index. = T)
+      lineB <- sapply(tree.path(plan.tree, 1, l),function(x) x$CSUM)
+      df   <- rbind(df, c(lineA,lineB))
+    }
+    lineA <- tree.path(plan.tree,1, node4max, index. = T)
+    lineB <- sapply(tree.path(plan.tree,1, node4max), function(x) x$CSUM)
+    df   <- rbind(df, c(lineA,lineB))
+
+    filepath <- file.path('.',paste(deparse(substitute(FUN)),'csv',sep='.'))
+    write.table(x=df, file=filepath, sep = ',',
+                append=file.exists(filepath),
+                row.names = F, col.names=!file.exists(filepath))
+    
     
     # store plan
-    plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x) { x$PROD })
+    plan <<- sapply(tree.path(plan.tree, 1, node4max), function(x) { 
+      c(PROD=x$PROD,VAR=x$VAR,CSUM=x$CSUM)
+    })
   }
   
   # update week to week of plan
   week <- (week%%no.weeks) + no.weeks*(!week%%no.weeks)
   
   # setup planned production for next week
-  prod[agent, sector] <- plan[week + 1]
+  prod[agent, sector] <- plan['PROD', week + 1]
   return(prod)
 } # End planned.FUN.prod
 
