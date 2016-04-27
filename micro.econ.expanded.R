@@ -95,7 +95,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
     hist.utility <- rbind(hist.utility,util)
     
     #CHANGE PREFERENCES
-    beta <- BETA.VAR(beta, data[[BETA]], data[[PRIC]], prices, 3, 1)
+    beta <- BETA.VAR(beta, data[[BETA]], data[[PRIC]], prices, 1, 1)
     #    print(beta)    
     
     # Initial wealth
