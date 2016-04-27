@@ -29,7 +29,7 @@ Agent.micro.econ <- function(data, weeks, verbose=TRUE, PROD.FUN=`const.prod`,
   # Maximum number of iterations
   it <- 75
   
-  # Price Mínimum and Maximum
+  # Price Minimum and Maximum
   price.limits <- list(PRICE.FACTOR[1] * prices,PRICE.FACTOR[2] * prices)  
   
   # Consumption of products to produce 1 unit (by sector, not by agent)
@@ -619,19 +619,6 @@ values.per.agent <- function(x, agent=1:nrow(x), data=base, simplify=T) {
 
 
 # *****************************************************************
-# Maximum possible production given raw material stock, for more than one sector
-
-multi.max.production <- function(agent, quant, cons.fixed, cons.unit.sector, ngoods) {
-  prod.vec <- rep(0,ngoods)
-  for (s in 1:ngoods) {
-    prod    <- (quant[agent,] - cons.fixed[agent,]) / cons.unit.sector[s,]
-    prod <- max(0, min(prod))
-    prod.vec[s] <- prod
-  }
-  return(prod.vec)
-} # End function multi.max.production
-
-# *****************************************************************
 # Update preferences (betas)
 
 # We use elipses to determine the new beta, given the new price.
@@ -645,15 +632,17 @@ multi.max.production <- function(agent, quant, cons.fixed, cons.unit.sector, ngo
 #   M <- maximum preference (tipically = 1)
 #   f <- multiplicative factor (if price is growing, the new beta will be 0 when price = initial price*(1+f) ) We use 5 as base case
 #
-
 update.betas <- function(beta_inic, orig_prices, prices, f=5, M=1)  {
   temp_prefs <- rep(0,4)
   max_prices <- orig_prices*(1+f)
   for (i in 1:length(orig_prices)) {
-    if (prices[i]<orig_prices[i] & prices[i] > 0) {  
-      temp_prefs[i] <- (1/orig_prices[i])*((beta_inic[1,i]-1) * sqrt(2*orig_prices[i]*prices[i] - prices[i]^2) + M*orig_prices[i]) ###em beta, assumimos que que são iguais para todos os consumidores; por isso podemos invocar o indice de linha 1 (agente 1)
-    } else if (prices[i]>=orig_prices[i] & prices[i] < max_prices[i]){
-      temp_prefs[i] <- (1/(f*orig_prices[i]))*(beta_inic[1,i]*sqrt((f^2)*(orig_prices[i]^2)-(orig_prices[i]^2)+2*orig_prices[i]*prices[i]-prices[i]^2))
+    P <- orig_prices[i]
+    B <- beta_inic[1,i]
+    x <- prices[i]
+    if (0<x && x<P) {
+      temp_prefs[i] <- (1/P)*((B-1) * sqrt(2*P*x - x^2) + M*P)
+    } else if (P<=x && x<max_prices[i]){
+      temp_prefs[i] <- (1/(f*P))*(B*sqrt((f^2)*(P^2)-(P^2)+2*P*x-x^2))
     } else {
       temp_prefs[i] <- 0.001
     }
@@ -676,6 +665,20 @@ var.beta <- function(beta, beta_inic, orig_prices, prices,f,M=1) {
 #  ///////////////////////////////////////////////////
 # ///////////////////MULTIPRODUCT////////////////////
 #///////////////////////////////////////////////////
+
+# *****************************************************************
+# Maximum possible production given raw material stock, for more than one sector
+
+multi.max.production <- function(agent, quant, cons.fixed, cons.unit.sector, ngoods) {
+  prod.vec <- rep(0,ngoods)
+  for (s in 1:ngoods) {
+    prod    <- (quant[agent,] - cons.fixed[agent,]) / cons.unit.sector[s,]
+    prod <- max(0, min(prod))
+    prod.vec[s] <- prod
+  }
+  return(prod.vec)
+} # End function multi.max.production
+
 
 # Change next week's production to maximize wealth, choosing production of 2 or more products
 multi.max.wealth.prod <- function(prod, quant, prices, beta, cons.fixed, cons.var, 
